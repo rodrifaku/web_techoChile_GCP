@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12 col-md-6 mb-2 mb-md-0">
+            <h2 class="h4 mb-0">{{ titulo }}</h2>
+        </div>
+        <div class="col-12 col-md-6 text-md-end">
+            <a href="{% url 'maestro_vivienda_create' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> <span class="d-none d-sm-inline">Crear Vivienda</span>
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Filtros -->
+    <div class="chart-container mb-4">
+        <form method="get" class="row g-2 align-items-end justify-content-start">
+            <div class="col-auto" style="min-width: 280px;">
+                <label for="beneficiario" class="form-label mb-1 fw-semibold">RUT o Nombre Beneficiario</label>
+                <input type="text" id="beneficiario" name="beneficiario" class="form-control" value="{{ request.GET.beneficiario }}" placeholder="Ej: 12345678-9 o nombre">
+            </div>
+            <div class="col-auto" style="min-width: 200px;">
+                <label for="codigo" class="form-label mb-1 fw-semibold">Código Vivienda</label>
+                <input type="text" id="codigo" name="codigo" class="form-control" value="{{ request.GET.codigo }}" placeholder="Ej: VIV-001">
+            </div>
+            <div class="col-auto d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3">Buscar</button>
+                <a href="{% url 'maestro_vivienda_list' %}" class="btn btn-sm btn-outline-primary fw-semibold px-3">Limpiar</a>
+            </div>
+        </form>
+    </div>
+    <div class="card">
+    <div class="card-body p-0 p-md-3">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Vivienda</th>
+                            <th class="d-none d-md-table-cell">Beneficiario</th>
+                            <th class="d-none d-lg-table-cell">Tipología</th>
+                            <th class="d-none d-lg-table-cell">Metros cuadrados</th>
+                            <th class="d-none d-lg-table-cell">Habitaciones</th>
+                            <th class="d-none d-sm-table-cell">Estado</th>
+                            <th class="d-none d-lg-table-cell">F. Entrega</th>
+                            <th class="d-none d-sm-table-cell">Activo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vivienda in viviendas %}
+                        <tr>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold">{{ vivienda.proyecto.codigo }}</span>
+                                    <span class="text-muted">{{ vivienda.codigo }}</span>
+                                    <small class="text-muted d-md-none">{{ vivienda.beneficiario|default:"Sin beneficiario" }}</small>
+                                    <small class="text-muted d-lg-none">{{ vivienda.tipologia.nombre }}</small>
+                                    <small class="text-muted d-lg-none">{{ vivienda.tipologia.metros_cuadrados|default:"-" }}</small>
+                                    <small class="text-muted d-lg-none">{{ vivienda.tipologia.numero_ambientes|default:"-" }}</small>
+                                    <div class="d-sm-none mt-1">
+                                        <span class="badge
+                                            {% if vivienda.prioridad == 'alta' %}badge-urgente
+                                            {% elif vivienda.prioridad == 'media' %}bg-warning
+                                            {% elif vivienda.prioridad == 'baja' %}bg-success
+                                            {% else %}
+                                                {% if vivienda.estado == 'construccion' %}bg-warning
+                                                {% elif vivienda.estado == 'entregada' %}bg-info
+                                                {% elif vivienda.estado == 'postventa' %}bg-primary
+                                                {% elif vivienda.estado == 'terminada' %}bg-success
+                                                {% endif %}
+                                            {% endif %}">
+                                            {% if vivienda.prioridad %}
+                                                {{ vivienda.get_prioridad_display }}
+                                            {% else %}
+                                                {{ vivienda.get_estado_display }}
+                                            {% endif %}
+                                        </span>
+                                        {% if vivienda.activa %}
+                                            <i class="bi bi-check-circle text-success ms-1"></i>
+                                        {% else %}
+                                            <i class="bi bi-x-circle text-secondary ms-1"></i>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="d-none d-md-table-cell">{{ vivienda.beneficiario|default:"-" }}</td>
+                            <td class="d-none d-lg-table-cell">{{ vivienda.tipologia.nombre }}</td>
+                            <td class="d-none d-lg-table-cell">{{ vivienda.tipologia.metros_cuadrados|default:"-" }}</td>
+                            <td class="d-none d-lg-table-cell">{{ vivienda.tipologia.numero_ambientes|default:"-" }}</td>
+                            <td class="d-none d-sm-table-cell">
+                                <span class="badge
+                                    {% if vivienda.prioridad == 'alta' %}badge-urgente
+                                    {% elif vivienda.prioridad == 'media' %}bg-warning
+                                    {% elif vivienda.prioridad == 'baja' %}bg-success
+                                    {% else %}
+                                        {% if vivienda.estado == 'construccion' %}bg-warning
+                                        {% elif vivienda.estado == 'entregada' %}bg-info
+                                        {% elif vivienda.estado == 'postventa' %}bg-primary
+                                        {% elif vivienda.estado == 'terminada' %}bg-success
+                                        {% endif %}
+                                    {% endif %}">
+                                    {% if vivienda.prioridad %}
+                                        {{ vivienda.get_prioridad_display }}
+                                    {% else %}
+                                        {{ vivienda.get_estado_display }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="d-none d-lg-table-cell">{{ vivienda.fecha_entrega|date:"d/m/Y"|default:"-" }}</td>
+                            <td class="d-none d-sm-table-cell">
+                                {% if vivienda.activa %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <a href="{% url 'maestro_vivienda_edit' vivienda.pk %}" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Editar</span>
+                                    </a>
+                                    <form method="post" action="{% url 'maestro_vivienda_delete' vivienda.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger" 
+                                                onclick="return confirm('¿Desactivar esta vivienda?')">
+                                            <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Desactivar</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No hay viviendas registradas.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="{% url 'maestro_index' %}" class="btn btn-secondary">Volver al Panel Maestro</a>
+    </div>
+</div>
+{% endblock %}

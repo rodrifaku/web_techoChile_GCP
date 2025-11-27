@@ -1,0 +1,938 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load region_filters %}
+
+{% block title %}Mi Dashboard - TECHO CHILE{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dynamic_titles.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+
+
+
+
+
+{% if es_familia %}
+<!-- ================================ -->
+<!-- DASHBOARD ESPECIAL PARA FAMILIA -->
+<!-- ================================ -->
+<div class="section-header">
+    <h2 class="dashboard-title dashboard-h2 dynamic-title mb-1">
+        <i class="bi bi-house-door"></i> Mi Vivienda
+    </h2>
+    {% if mi_vivienda %}
+    <p class="dashboard-title dashboard-h5 dynamic-title d-none d-md-block">Información y seguimiento de tu vivienda - {{ mi_vivienda.proyecto.nombre }}</p>
+    {% else %}
+    <p class="dashboard-title dashboard-h5 dynamic-title text-warning d-none d-md-block">No se encontró una vivienda asignada a tu cuenta</p>
+    {% endif %}
+</div>
+
+{% if sin_vivienda %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> 
+    <strong>Atención:</strong> No tienes una vivienda asignada en el sistema. 
+    Por favor contacta con el administrador.
+</div>
+{% else %}
+
+<!-- Información de la vivienda -->
+{% if mi_vivienda %}
+<div class="chart-container mb-4">
+    <h4 class="dashboard-title dashboard-h4"><i class="bi bi-house-door"></i> Datos de mi vivienda</h4>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <p><strong>Código:</strong> {{ mi_vivienda.codigo }}</p>
+            <p><strong>Proyecto:</strong> {{ mi_vivienda.proyecto.nombre }}</p>
+            <p><strong>Dirección:</strong> {{ mi_vivienda.direccion }}</p>
+        </div>
+        <div class="col-md-6">
+            <p><strong>Comuna:</strong> {{ mi_vivienda.proyecto.comuna.nombre }}</p>
+            <p><strong>Estado:</strong> 
+                <span class="badge bg-{% if mi_vivienda.estado == 'entregada' %}success{% else %}warning{% endif %}">
+                    {{ mi_vivienda.estado|title }}
+                </span>
+            </p>
+            <p><strong>Tipología:</strong> {{ mi_vivienda.tipologia.nombre|default:"No especificada" }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Métricas de observaciones -->
+<div class="chart-container mb-4">
+    <h4 class="dashboard-title dashboard-h4"><i class="bi bi-exclamation-triangle"></i> Mis Observaciones</h4>
+    <div class="row g-3 g-md-4">
+        <div class="col-6 col-lg-3">
+            <div class="metric-card text-center">
+                <h3 class="metric-number display-3">{{ obs_total|default:"0" }}</h3>
+                <p class="metric-label">Total</p>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="metric-card warning text-center">
+                <h3 class="metric-number display-3">{{ obs_abiertas|default:"0" }}</h3>
+                <p class="metric-label">Abiertas</p>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="metric-card danger text-center">
+                <h3 class="metric-number display-3">{{ obs_urgentes|default:"0" }}</h3>
+                <p class="metric-label">Urgentes</p>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="metric-card success text-center">
+                <h3 class="metric-number display-3">{{ obs_cerradas|default:"0" }}</h3>
+                <p class="metric-label">Resueltas</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Barra de progreso -->
+    {% if obs_total > 0 %}
+    <div class="techo-progress mb-3 mt-4">
+        <div class="progress-bar bg-success" style="width: {{ porc_cerradas }}%">
+            {{ obs_cerradas }} resueltas
+        </div>
+        <div class="progress-bar bg-warning" style="width: {{ porc_abiertas }}%">
+            {{ obs_abiertas }} abiertas
+        </div>
+        {% if obs_vencidas > 0 %}
+        <div class="progress-bar bg-danger" style="width: {{ porc_vencidas }}%">
+            {{ obs_vencidas }} vencidas
+        </div>
+        {% endif %}
+    </div>
+    <div class="text-center">
+        <span class="badge bg-success fs-6 px-3 py-2">{{ porc_cerradas }}%</span>
+        <div class="small text-muted mt-2">{{ porc_cerradas }}% de tus observaciones han sido resueltas</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Últimas observaciones de SU vivienda -->
+{% if ultimas_observaciones %}
+<div class="chart-container">
+    <h4 class="dashboard-title dashboard-h4"><i class="bi bi-clock-history"></i> Últimas observaciones de mi vivienda</h4>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Elemento</th>
+                    <th>Detalle</th>
+                    <th>Estado</th>
+                    <th>Días restantes</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for obs in ultimas_observaciones %}
+                <tr>
+                    <td>{{ obs.fecha_creacion|date:"d/m/Y" }}</td>
+                    <td><strong>{{ obs.elemento }}</strong></td>
+                    <td>{{ obs.detalle|truncatewords:10 }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if obs.estado.nombre == 'Abierta' %}bg-warning
+                            {% elif obs.estado.nombre == 'Cerrada' %}bg-success
+                            {% else %}bg-secondary{% endif %}">
+                            {{ obs.estado.nombre }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if obs.dias_para_vencer %}
+                            {% if obs.dias_para_vencer > 0 %}
+                                <span class="text-success">{{ obs.dias_para_vencer }} días</span>
+                            {% else %}
+                                <span class="text-danger">Vencida</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'incidencias:detalle_observacion' obs.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> Ver
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="text-center mt-3">
+        <a href="{% url 'incidencias:lista_observaciones' %}" class="btn btn-primary">
+            <i class="bi bi-list-ul"></i> Ver todas mis observaciones
+        </a>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No tienes observaciones registradas todavía.
+    {% if mi_vivienda %}
+    <br><a href="{% url 'incidencias:crear_observacion' %}" class="btn btn-sm btn-primary mt-2">
+        <i class="bi bi-plus-circle"></i> Crear primera observación
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endif %}
+
+{% else %}
+<!-- ====================================== -->
+<!-- DASHBOARD NORMAL PARA OTROS ROLES -->
+<!-- ====================================== -->
+
+<!-- Formulario de filtro para dashboard -->
+
+<form id="dashboardFilterForm" method="get" class="mb-4 p-3 rounded shadow-sm" style="background:var(--dashboard-card-bg);border:1.5px solid var(--dashboard-border);">
+    <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-3">
+            <label for="region" class="form-label mb-1">Región</label>
+            <select name="region" id="region" class="form-select">
+                <option value="">Todas</option>
+                {% for reg in regiones %}
+                    <option value="{{ reg.id }}" {% if request.GET.region == reg.id|stringformat:'s' %}selected{% endif %}>{{ reg.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label for="fecha_inicio" class="form-label mb-1">Desde</label>
+            <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" value="{{ request.GET.fecha_inicio }}">
+        </div>
+        <div class="col-6 col-md-2">
+            <label for="fecha_fin" class="form-label mb-1">Hasta</label>
+            <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" value="{{ request.GET.fecha_fin }}">
+        </div>
+        <div class="col-12 col-md d-flex flex-wrap align-items-end justify-content-end gap-2 mt-2 mt-md-0">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filtrar</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+            <a id="btnDescargarPDF" class="btn btn-outline-danger btn-sm" href="#" target="_blank"><i class="bi bi-file-earmark-pdf"></i> Gerenar Reporte PDF</a>
+            <a id="btnDescargarExcel" class="btn btn-outline-success btn-sm" href="#" target="_blank"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+        </div>
+    </div>
+</form>
+
+<script>
+// Actualiza los links de los botones de descarga según los filtros
+function updateDashboardLinks() {
+    const form = document.getElementById('dashboardFilterForm');
+    const params = new URLSearchParams(new FormData(form)).toString();
+    document.getElementById('btnDescargarPDF').href = '/dashboard/generando-reporte/?' + params;
+    document.getElementById('btnDescargarExcel').href = '/dashboard/reporte-excel/?' + params;
+}
+document.getElementById('dashboardFilterForm').addEventListener('change', updateDashboardLinks);
+document.addEventListener('DOMContentLoaded', updateDashboardLinks);
+</script>
+<div class="row g-4 align-items-stretch mb-4">
+    <div class="col-12 col-xl-6 d-flex">
+        <div class="chart-container flex-fill w-100 h-100 d-flex flex-column justify-content-between" style="border-radius: 0 0 6px 6px; margin-top: 0;">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 w-100">
+                <h2 class="dashboard-title dashboard-h2 dynamic-title mb-0 d-flex align-items-center">
+                    <i class="bi bi-bar-chart me-2"></i> Resumen gestión
+                    <span class="dashboard-title dashboard-h5 dynamic-title d-none d-md-inline ms-3" style="font-weight: normal; font-size: 1.1rem;">Métricas de Techo Chile</span>
+                </h2>
+            </div>
+            <div class="row g-2 mb-2">
+                <!-- Tarjetas de métricas de Techo Chile -->
+                <div class="col-6 col-md-3 d-flex">
+                    <a href="{% url 'viviendas:lista' %}" class="text-decoration-none">
+                        <div class="metric-card text-center h-100" style="cursor: pointer; transition: transform 0.2s;">
+                            <h3 class="metric-number display-2">{{ viviendas_total|default:"0" }}</h3>
+                            <p class="metric-label">Total<br class="d-none d-sm-inline">Viviendas</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-3 d-flex">
+                    <a href="{% url 'incidencias:lista_observaciones' %}?estado_nombre=Abierta" class="text-decoration-none">
+                        <div class="metric-card warning text-center h-100" style="cursor: pointer; transition: transform 0.2s;">
+                            <h3 class="metric-number display-2">{{ obs_abiertas|default:"0" }}</h3>
+                            <p class="metric-label">Observaciones<br class="d-none d-sm-inline">abiertas</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-3 d-flex">
+                    <a href="{% url 'incidencias:lista_observaciones' %}?es_urgente=1&estado_nombre=Abierta" class="text-decoration-none">
+                        <div class="metric-card danger text-center h-100" style="cursor: pointer; transition: transform 0.2s;">
+                            <h3 class="metric-number display-2">{{ obs_urgentes|default:"0" }}</h3>
+                            <p class="metric-label">Observaciones<br class="d-none d-sm-inline">urgentes</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-md-3 d-flex">
+                    <a href="{% url 'incidencias:lista_observaciones' %}?estado_nombre=Cerrada" class="text-decoration-none">
+                        <div class="metric-card success text-center h-100" style="cursor: pointer; transition: transform 0.2s;">
+                            <h3 class="metric-number display-2">{{ obs_cerradas|default:"0" }}</h3>
+                            <p class="metric-label">Observaciones<br class="d-none d-sm-inline">cerradas</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <!-- Barra de progreso de observaciones -->
+            <div class="row mt-12">
+                <div class="col-6 col-md-12">
+                    <div class="techo-progress mb-6">
+                        <div class="progress-bar bg-success" style="width: {{ porc_cerradas|default:"0" }}%">
+                            {{ obs_cerradas|default:"0" }} observaciones cerradas
+                        </div>
+                        <div class="progress-bar bg-warning" style="width: {{ porc_abiertas|default:"0" }}%">
+                            {{ obs_abiertas|default:"0" }} abiertas
+                        </div>
+                        <div class="progress-bar bg-danger" style="width: {{ porc_vencidas|default:"0" }}%">
+                            {{ obs_vencidas|default:"0" }} vencidas
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <span class="badge bg-success fs-6 px-3 py-2">{{ porc_cerradas|default:"0" }}%</span>
+                        <div class="small text-muted mt-2">{{ porc_cerradas|default:"0" }}% de avance total de la gestión</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-4 d-flex flex-grow-1" style="flex:1 1 0;">
+    <div class="card flex-fill w-100 h-100 d-flex flex-column justify-content-between dashboard-dark-card">
+            <div class="card-body d-flex flex-column justify-content-between h-100 p-3">
+                <h5 class="dashboard-title dashboard-h5 mb-2">Observaciones por Tipo</h5>
+                <canvas id="graficoObservacionesTipo" style="width:100% !important; min-width:0; height:300px; min-height:180px; display:block;" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Fila con Gauge, Casos cerrados por mes y Avance por estado alineados -->
+
+<style>
+                    :root {
+                        --dashboard-bg: #f6f8fa;
+                        --dashboard-card-bg: #fff;
+                        --dashboard-border: #e5e7eb;
+                        --dashboard-shadow: 0 2px 12px 0 rgba(44,62,80,0.07);
+                        --dashboard-radius: 18px;
+                        --dashboard-gap: 0.7rem;
+                        --dashboard-title: #1e293b;
+                        --dashboard-subtle: #64748b;
+                        --dashboard-title-strong: #0f172a;
+                    }
+                            body.theme-dark {
+                                --dashboard-bg: #181f2a;
+                                --dashboard-card-bg: #232b3b;
+                                --dashboard-border: #2d3748;
+                                --dashboard-title: #f8fafc;
+                                --dashboard-subtle: #e5e7eb;
+                                --dashboard-title-strong: #fff;
+                                --dashboard-input-bg: #232b3b;
+                                --dashboard-input-border: #3b4252;
+                                --dashboard-input-text: #f8fafc;
+                            }
+                    body.theme-light {
+                        --dashboard-bg: #f6f8fa;
+                        --dashboard-card-bg: #fff;
+                        --dashboard-border: #e5e7eb;
+                        --dashboard-title: #1e293b;
+                        --dashboard-subtle: #64748b;
+                        --dashboard-title-strong: #0f172a;
+                    }
+    body {
+        background: var(--dashboard-bg) !important;
+    }
+        .dashboard-executive-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--dashboard-gap);
+            margin-bottom: 1.2rem;
+            align-items: stretch;
+        }
+        .dashboard-executive-row > .col-lg-4 {
+            display: flex;
+            flex-direction: column;
+            justify-content: stretch;
+            min-width: 320px;
+            flex: 1 1 0;
+            padding: 0;
+        }
+        .dashboard-executive-row .card,
+        .dashboard-executive-row .avance-panel {
+            background: var(--dashboard-card-bg) !important;
+            border-radius: var(--dashboard-radius);
+            border: 1.5px solid var(--dashboard-border);
+            box-shadow: var(--dashboard-shadow);
+            min-height: 320px;
+            max-height: 400px;
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 1.1rem 1.2rem 1.2rem 1.2rem;
+        }
+    .dashboard-executive-row .gauge-responsive-container {
+        max-width: 320px !important;
+        min-width: 180px !important;
+        aspect-ratio: 2.2/1;
+    }
+    .dashboard-executive-row canvas {
+        max-height: 180px !important;
+        height: 180px !important;
+        margin: 0 auto;
+        display: block;
+    }
+    .dashboard-executive-row .card-body {
+        padding: 1rem !important;
+    }
+    .dashboard-executive-row .mb-4 {
+        margin-bottom: 1rem !important;
+    }
+            .dashboard-title {
+                color: var(--dashboard-title-strong) !important;
+                font-weight: 700;
+                letter-spacing: 0.01em;
+            }
+            .dashboard-h5 {
+                color: var(--dashboard-title) !important;
+                font-weight: 600;
+                letter-spacing: 0.01em;
+            }
+                .dashboard-executive-row,
+                .dashboard-executive-row .card,
+                .dashboard-executive-row .avance-panel {
+                    color: var(--dashboard-title) !important;
+                }
+                .dashboard-executive-row .avance-description,
+                .dashboard-executive-row .small {
+                    color: var(--dashboard-subtle) !important;
+                }
+                .dashboard-executive-row .avance-percentage {
+                    color: var(--dashboard-title-strong) !important;
+                    font-weight: 700;
+                }
+            .dashboard-executive-row select.form-select {
+                background: var(--dashboard-input-bg) !important;
+                border: 2px solid var(--dashboard-input-border) !important;
+                color: var(--dashboard-input-text) !important;
+            }
+            .gauge-responsive-container {
+                background: var(--dashboard-card-bg) !important;
+            }
+                #nombreConstructoraElegida {
+                    color: #38bdf8 !important;
+                    background: transparent !important;
+                }
+    .avance-panel ul.avance-stats {
+        margin-top: 1.2rem;
+        margin-bottom: 0;
+    }
+    @media (max-width: 1200px) {
+        .dashboard-executive-row {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .dashboard-executive-row > .col-lg-4 {
+            min-width: 0;
+        }
+    }
+</style>
+<style>
+  /* Alineación vertical y altura igual para los tres bloques ejecutivos */
+  .dashboard-executive-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    margin-bottom: 2.5rem;
+    gap: 1.5rem;
+  }
+  .dashboard-executive-row > .col-lg-4 {
+    display: flex;
+    flex-direction: column;
+    justify-content: stretch;
+  }
+  .dashboard-executive-row .card,
+  .dashboard-executive-row .avance-panel {
+    min-height: 260px !important;
+    max-height: 340px !important;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .dashboard-executive-row .gauge-responsive-container {
+    max-width: 320px !important;
+    min-width: 180px !important;
+    aspect-ratio: 2.2/1;
+  }
+  .dashboard-executive-row canvas {
+    max-height: 180px !important;
+    height: 180px !important;
+    margin: 0 auto;
+    display: block;
+  }
+  .dashboard-executive-row .card-body {
+    padding: 1rem !important;
+  }
+  .dashboard-executive-row .mb-4 {
+    margin-bottom: 1rem !important;
+  }
+</style>
+<div class="row mb-6 dashboard-executive-row">
+    <!-- Gauge a la izquierda -->
+    <div class="col-lg-4">
+    <div class="card shadow-lg p-3 p-md-4 w-100 dashboard-dark-card">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-2 gap-2 dashboard-card-header">
+                <h5 class="mb-0 text-start w-100 dashboard-card-title">Cumplimiento de Plazos</h5>
+                <!-- Eliminado select de constructora, solo se muestra el gauge y la región/global -->
+                <hr style="margin:0.5rem 0 0.7rem 0; border-top:2px solid #e0e7ef;"> 
+            </div>
+            <div class="gauge-responsive-container position-relative mx-auto d-flex flex-column align-items-center justify-content-center" style="width:100%;max-width:320px;min-width:180px;aspect-ratio:2.2/1;padding-bottom:0.5rem;background:var(--dashboard-card-bg);border-radius:var(--dashboard-radius);">
+                <canvas id="gaugeConstructora" class="dashboard-dark-bg" style="width:100%!important;height:180px!important;display:block;margin:auto;"></canvas>
+                <div id="gaugeLabel" class="position-absolute top-50 start-50 translate-middle fs-1 fw-bold dashboard-card-text">0%</div>
+                <div id="gaugeNivel" class="position-absolute start-50 translate-middle-x dashboard-card-text" style="top:72%;font-size:1.2rem;font-weight:600;">-</div>
+            </div>
+            <div class="text-center mt-2 mb-1" style="font-size:1.08rem;font-weight:500;color:#38bdf8;letter-spacing:0.5px;line-height:1.2;background:transparent;">
+                {% if request.GET.region %}
+                    {{ regiones|get_region_nombre:request.GET.region }}
+                {% else %}
+                    global
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <!-- Casos cerrados por mes al centro -->
+    <div class="col-lg-4">
+    <div class="card flex-fill w-100 h-100 d-flex flex-column justify-content-between dashboard-dark-card">
+            <div class="card-body d-flex flex-column justify-content-between h-100 p-3" style="padding:1rem!important;">
+                <h5 class="dashboard-title dashboard-h5 mb-2 text-start" style="padding-top:1.25rem;">Casos cerrados por mes</h5>
+                <canvas id="graficoCerradosMes" style="width:100% !important; min-width:0; height:180px !important; min-height:100px; display:block;" height="180"></canvas>
+<script>
+// Forzar color de texto blanco en modo dark para el gráfico de Casos cerrados por mes
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.body.classList.contains('theme-dark')) {
+        if (window.graficoCerradosMesChart) {
+            graficoCerradosMesChart.options.scales.x.ticks.color = '#f3f4f6';
+            graficoCerradosMesChart.options.scales.y.ticks.color = '#f3f4f6';
+            graficoCerradosMesChart.options.plugins.legend.labels.color = '#f3f4f6';
+            graficoCerradosMesChart.options.plugins.title.color = '#f3f4f6';
+            graficoCerradosMesChart.update();
+        }
+    }
+});
+</script>
+            </div>
+        </div>
+    </div>
+    <!-- Avance por estado a la derecha -->
+    <div class="col-lg-4">
+    <div class="avance-panel flex-fill w-100 d-flex flex-column align-items-center justify-content-center dashboard-dark-card" style="min-height:340px;padding:1.5rem 0 1.2rem 0;">
+            <h5 class="dashboard-title dashboard-h5 w-100 text-center dashboard-card-title" style="padding-top:0.5rem;margin-bottom:1.2rem;">Avance por estado</h5>
+            <div class="d-flex flex-row align-items-center justify-content-center w-100 dashboard-card-text" style="flex:1;min-height:200px;min-width:220px;gap:2.5rem;">
+            <div class="d-flex flex-row align-items-center justify-content-center w-100" style="flex:1;min-height:200px;min-width:220px;gap:2.5rem;">
+                <!-- Columna izquierda: Cerradas -->
+                <div class="text-end d-flex flex-column align-items-end justify-content-center" style="min-width:120px;color:var(--dashboard-title);">
+                    <div class="avance-percentage dashboard-card-text" style="font-size:1.35rem;font-weight:700;">{{ porc_cerradas|default:"0" }}%</div>
+                    <div class="avance-description dashboard-card-text" style="font-size:1rem;">Observaciones cerradas</div>
+                    <div class="small dashboard-card-text">Llevas <strong>{{ obs_cerradas|default:"0" }} de {{ obs_total|default:"0" }}</strong></div>
+                    <div class="small text-success dashboard-card-text">Observaciones del plan</div>
+                </div>
+                <!-- Centro: Círculo -->
+                <div style="display:flex;align-items:center;justify-content:center;background:transparent;">
+                    <canvas id="statusChart" style="max-width:220px;max-height:200px;width:100%;height:100%;display:block;margin:auto;" width="220" height="200"
+                        data-cerradas="{{ obs_cerradas|default:'0' }}"
+                        data-abiertas="{{ obs_abiertas|default:'0' }}"
+                        data-vencidas="{{ obs_vencidas|default:'0' }}">
+                    </canvas>
+                </div>
+                <!-- Columna derecha: Abiertas -->
+                <div class="text-start d-flex flex-column align-items-start justify-content-center" style="min-width:120px;color:var(--dashboard-title);">
+                    <div class="avance-percentage dashboard-card-text" style="font-size:1.35rem;font-weight:700;">{{ porc_abiertas|default:"0" }}%</div>
+                    <div class="avance-description dashboard-card-text" style="font-size:1rem;">Observaciones abiertas</div>
+                    <div class="small dashboard-card-text">Llevas <strong>{{ obs_abiertas|default:"0" }} de {{ obs_total|default:"0" }}</strong></div>
+                    <div class="small text-warning dashboard-card-text">Observaciones pendientes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+   
+
+
+
+<script>
+            // Datos de cumplimiento por constructora desde Django
+            const cumplimientoData = {{ cumplimiento_constructoras|safe }};
+            let currentValue = Object.values(cumplimientoData)[0] || 0;
+
+            // Gauge exacto como la foto: fondo con bandas gruesas, indicador celeste encima
+            const canvas = document.getElementById('gaugeConstructora');
+            function resizeGaugeCanvas() {
+                const parent = canvas.parentElement;
+                canvas.width = parent.offsetWidth;
+                canvas.height = parent.offsetWidth / 2.2;
+            }
+            resizeGaugeCanvas();
+            window.addEventListener('resize', resizeGaugeCanvas);
+            const ctxGauge = canvas.getContext('2d');
+            let gaugeChart = new Chart(ctxGauge, {
+                type: 'doughnut',
+                data: {
+                    datasets: [
+                        {
+                            // Fondo bandas
+                            data: [60, 25, 15],
+                            backgroundColor: ['#ff4747', '#ffb31a', '#10b981'],
+                            borderWidth: 6,
+                            cutout: '65%',
+                            circumference: 180,
+                            rotation: 270,
+                        },
+                        {
+                            // Indicador valor (línea celeste)
+                            data: [currentValue, 100-currentValue],
+                            backgroundColor: ['#16c7e5', 'rgba(0,0,0,0)'],
+                            borderWidth: 8, // más grueso
+                            borderColor: ['#16c7e5', 'rgba(0,0,0,0)'],
+                            cutout: '78%',
+                            circumference: 180,
+                            rotation: 270,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+            // Actualizar gauge, label y nivel
+            function updateGauge(value) {
+                gaugeChart.data.datasets[1].data = [value, 100-value];
+                gaugeChart.update();
+                document.getElementById('gaugeLabel').textContent = value + '%';
+                // Etiqueta textual de nivel
+                let nivel = '-';
+                let color = '#222';
+                if (value < 60) { nivel = 'Bajo'; color = '#ff4747'; }
+                else if (value < 85) { nivel = 'Medio'; color = '#ffb31a'; }
+                else { nivel = 'Alto'; color = '#10b981'; }
+                let nivelDiv = document.getElementById('gaugeNivel');
+                nivelDiv.textContent = nivel;
+                nivelDiv.style.color = color;
+            }
+            // Inicial
+            updateGauge(currentValue);
+        </script>
+  
+</div>
+
+
+
+
+
+
+<!-- Métricas por Región (al lado de Casos cerrados por mes, color claro) -->
+<div class="col-lg-4 d-flex">
+    {# Eliminado mensaje de región seleccionada para evitar mensajes de debug o alertas innecesarias #}
+    <div class="card flex-fill w-100 h-100 d-flex flex-column justify-content-between dashboard-dark-card">
+        <div class="card-header dashboard-dark-card">
+            <strong>Métricas por Región</strong>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 dashboard-dark-table">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Región</th>
+                        <th scope="col">Viviendas por Región</th>
+                        <th scope="col">Entregadas</th>
+                        <th scope="col">Casos Postventa</th>
+                        <th scope="col">Tiempo Promedio</th>
+                        <th scope="col">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in metrics_region %}
+                    <tr{% if forloop.counter0|divisibleby:2 %} class="table-active"{% endif %}>
+                        <td data-label="Región"><strong>{{ reg.region }}</strong></td>
+                        <td data-label="Viviendas por Región">{{ reg.total_viviendas }}</td>
+                        <td data-label="Entregadas">{{ reg.entregadas }}</td>
+                        <td data-label="Casos Postventa">{{ reg.casos_postventa }}</td>
+                        <td data-label="Tiempo Promedio">{% if reg.promedio_dias != '-' %}{{ reg.promedio_dias }} días{% else %}-{% endif %}</td>
+                        <td data-label="Estado">
+                            {% if reg.estado == 'Crítico' %}
+                                <span class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> Crítico</span>
+                            {% elif reg.estado == 'Regular' %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Regular</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark"><i class="bi bi-check2-square"></i> Bueno</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <style>
+            @media (max-width: 600px) {
+              .table-responsive table thead {
+                display: none;
+              }
+              .table-responsive table tr {
+                display: block;
+                margin-bottom: 1rem;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+                background: #fff;
+              }
+              [data-theme="dark"] .table-responsive table tr {
+                background: #232a36;
+              }
+              .table-responsive table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.75rem 1rem;
+                border: none;
+                border-bottom: 1px solid #e5e7eb;
+                font-size: 1rem;
+              }
+              .table-responsive table td:before {
+                content: attr(data-label) ": ";
+                font-weight: 600;
+                color: #2563eb;
+                flex-shrink: 0;
+                margin-right: 0.5rem;
+              }
+            }
+            </style>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('graficoObservacionesTipo').getContext('2d');
+    function getAxisColor() {
+        // Intenta usar la variable CSS, si no, fallback por tema
+        const theme = document.documentElement.getAttribute('data-theme');
+        if (theme === 'dark') return '#f8fafc';
+        if (theme === 'light') return '#222';
+        // fallback
+        return getComputedStyle(document.body).getPropertyValue('--bs-body-color') || '#222';
+    }
+
+    function getGridColor() {
+        const theme = document.documentElement.getAttribute('data-theme');
+        if (theme === 'dark') return 'rgba(255,255,255,0.08)';
+        if (theme === 'light') return 'rgba(0,0,0,0.08)';
+        return 'rgba(0,0,0,0.08)';
+    }
+    const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ labels|safe }},
+            datasets: [{
+                label: 'Cantidad de Observaciones',
+                data: {{ values|safe }},
+                backgroundColor: [
+                    '#06b6d4', '#fbbf24', '#ef4444', '#fef08a', '#64748b', '#f87171', '#a3e635', '#f472b6'
+                ],
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: getAxisColor(),
+                        font: { weight: 'bold', size: 14 }
+                    },
+                    grid: {
+                        color: getGridColor(),
+                        borderColor: getGridColor()
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: getAxisColor(),
+                        font: { weight: 'bold', size: 14 }
+                    },
+                    grid: {
+                        color: getGridColor(),
+                        borderColor: getGridColor()
+                    }
+                }
+            }
+        }
+    });
+
+    // Actualiza el color de los ejes del gráfico cuando cambia el tema
+    function updateChartAxisColors() {
+        const color = getAxisColor();
+        const gridColor = getGridColor();
+        chart.options.scales.x.ticks.color = color;
+        chart.options.scales.y.ticks.color = color;
+        chart.options.scales.x.ticks.font = { weight: 'bold', size: 14 };
+        chart.options.scales.y.ticks.font = { weight: 'bold', size: 14 };
+        chart.options.scales.x.grid.color = gridColor;
+        chart.options.scales.x.grid.borderColor = gridColor;
+        chart.options.scales.y.grid.color = gridColor;
+        chart.options.scales.y.grid.borderColor = gridColor;
+        chart.update();
+    }
+
+    // Observa cambios en el atributo data-theme del html
+    const themeObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                updateChartAxisColors();
+            }
+        });
+    });
+    themeObserver.observe(document.documentElement, { attributes: true });
+
+    // Gráfico de casos cerrados por mes (tipo línea)
+    const ctxCerrados = document.getElementById('graficoCerradosMes').getContext('2d');
+    const chartCerrados = new Chart(ctxCerrados, {
+        type: 'line',
+        data: {
+            labels: {{ meses_cerrados|safe }},
+            datasets: [{
+                label: 'Casos cerrados',
+                data: {{ valores_cerrados|safe }},
+                fill: false,
+                borderColor: '#22c55e',
+                backgroundColor: '#22c55e',
+                tension: 0.3,
+                pointRadius: 5,
+                pointBackgroundColor: '#22c55e',
+                pointBorderColor: '#22c55e',
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                title: { display: false }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: getAxisColor(),
+                        font: { weight: 'bold', size: 14 }
+                    },
+                    grid: {
+                        color: getGridColor(),
+                        borderColor: getGridColor()
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: getAxisColor(),
+                        font: { weight: 'bold', size: 14 }
+                    },
+                    grid: {
+                        color: getGridColor(),
+                        borderColor: getGridColor()
+                    }
+                }
+            }
+        }
+    });
+
+    // Actualiza el color de los ejes del gráfico de cerrados cuando cambia el tema
+    function updateChartCerradosAxisColors() {
+        const color = getAxisColor();
+        const gridColor = getGridColor();
+        chartCerrados.options.scales.x.ticks.color = color;
+        chartCerrados.options.scales.y.ticks.color = color;
+        chartCerrados.options.scales.x.ticks.font = { weight: 'bold', size: 14 };
+        chartCerrados.options.scales.y.ticks.font = { weight: 'bold', size: 14 };
+        chartCerrados.options.scales.x.grid.color = gridColor;
+        chartCerrados.options.scales.x.grid.borderColor = gridColor;
+        chartCerrados.options.scales.y.grid.color = gridColor;
+        chartCerrados.options.scales.y.grid.borderColor = gridColor;
+        chartCerrados.update();
+    }
+
+    // Observa cambios en el atributo data-theme del html para el gráfico de cerrados
+    const themeObserverCerrados = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                updateChartCerradosAxisColors();
+            }
+        });
+    });
+    themeObserverCerrados.observe(document.documentElement, { attributes: true });
+</script>
+
+
+
+
+            
+
+           
+        </div>
+    </div>
+
+    
+
+<!-- Acciones rápidas de Techo Chile -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="chart-container">
+            <h4 class="mb-4 dashboard-title dashboard-h4">Acciones rápidas</h4>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <a href="{% url 'proyectos:crear' %}" class="btn btn-techo-primary w-100"
+                       style="background: linear-gradient(45deg, #2563eb, #1e40af) !important; color: white !important; border: none !important; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important; font-weight: 600 !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 0.5rem !important; transition: all 0.3s ease !important;">
+                    Nuevo Proyecto
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'incidencias:crear_observacion' %}" class="btn btn-techo-primary w-100">
+                        Nueva Observación
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'proyectos:lista' %}" class="btn btn-outline-primary w-100">
+                        Ver Proyectos
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'incidencias:lista_observaciones' %}" class="btn  btn-outline-primary w-100">
+                        Ver Observaciones
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+{% endif %}
+<!-- FIN DEL BLOQUE PARA OTROS ROLES -->
+
+{% endblock %}

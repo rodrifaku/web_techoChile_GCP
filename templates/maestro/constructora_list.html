@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12 col-md-6 mb-2 mb-md-0">
+            <h2 class="h4 mb-0">{{ titulo }}</h2>
+        </div>
+        <div class="col-12 col-md-6 text-md-end">
+            <a href="{% url 'maestro_constructora_create' %}" class="btn btn-primary btn-sm fw-semibold px-3">
+                <i class="bi bi-plus-circle"></i> <span class="d-none d-sm-inline">Crear Constructora</span>
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Formulario de búsqueda -->
+    <div class="chart-container mb-4">
+        <form method="get" class="row g-2 align-items-end justify-content-start">
+            <div class="col-auto">
+                <label for="rut" class="form-label mb-1 fw-semibold">Buscar Constructora</label>
+                <input type="text" id="rut" name="rut" class="form-control form-control-sm" style="min-width: 200px; background-color: var(--bs-body-bg); color: var(--bs-body-color);" value="{{ request.GET.rut }}" placeholder="Nombre o RUT">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3">Buscar</button>
+                <a href="{% url 'maestro_constructora_list' %}" class="btn btn-sm btn-outline-primary fw-semibold px-3 ms-2">Limpiar</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th class="d-none d-md-table-cell">RUT</th>
+                            <th class="d-none d-lg-table-cell">Región</th>
+                            <th class="d-none d-lg-table-cell">Comuna</th>
+                            <th class="d-none d-sm-table-cell">Teléfono</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for constructora in constructoras %}
+                        <tr>
+                            <td>{{ constructora.nombre }}</td>
+                            <td class="d-none d-md-table-cell">{{ constructora.rut|default:"-" }}</td>
+                            <td class="d-none d-lg-table-cell">{{ constructora.region.nombre|default:"-" }}</td>
+                            <td class="d-none d-lg-table-cell">{{ constructora.comuna.nombre|default:"-" }}</td>
+                            <td class="d-none d-sm-table-cell">{{ constructora.telefono|default:"-" }}</td>
+                            <td>
+                                {% if constructora.activo %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <a href="{% url 'maestro_constructora_edit' constructora.pk %}" class="btn btn-sm btn-warning fw-semibold px-3">
+                                        <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Editar</span>
+                                    </a>
+                                    <form method="post" action="{% url 'maestro_constructora_delete' constructora.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger fw-semibold px-3" 
+                                                onclick="return confirm('¿Desactivar esta constructora?')">
+                                            <i class="bi bi-trash"></i> <span class="d-none d-md-inline">Desactivar</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No hay constructoras registradas.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="{% url 'maestro_index' %}" class="btn btn-secondary btn-sm fw-semibold px-3">
+            <i class="bi bi-arrow-left"></i> Volver al Panel Maestro
+        </a>
+    </div>
+</div>
+{% endblock %}

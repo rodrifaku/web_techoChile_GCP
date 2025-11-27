@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TECHO CHILE - Sistema de Gestión{% endblock %}</title>
+    {% load static %}
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/bootstrap-icons.css' %}">
+    <link href="{% static 'css/techo_style.css' %}?v=2025101403" rel="stylesheet">
+    <script src="{% static 'js/chart.js' %}"></script>
+</head>
+<body>
+    <!-- Botón minimalista de modo oscuro -->
+    <style>
+    #theme-toggle-main {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        z-index: 9999;
+        width: 36px;
+        height: 36px;
+        font-size: 1.35rem;
+        background: transparent;
+        border: none;
+        outline: none;
+        box-shadow: none;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s, color 0.2s;
+        cursor: pointer;
+    }
+    #theme-toggle-main:hover {
+        background: rgba(0,0,0,0.10);
+        color: #ffd700;
+    }
+    </style>
+    <button id="theme-toggle-main" title="Alternar modo oscuro" aria-label="Alternar modo oscuro">🌙</button>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btn = document.getElementById('theme-toggle-main');
+        const html = document.documentElement;
+        const body = document.body;
+        // Leer tema guardado
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        if (savedTheme === 'dark') {
+            body.classList.add('theme-dark');
+            if (btn) btn.innerHTML = '☀️';
+        } else {
+            body.classList.remove('theme-dark');
+            if (btn) btn.innerHTML = '🌙';
+        }
+        if (btn) {
+            btn.addEventListener('click', function() {
+                const currentTheme = html.getAttribute('data-theme') || 'light';
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', newTheme);
+                if (newTheme === 'dark') {
+                    body.classList.add('theme-dark');
+                    btn.innerHTML = '☀️';
+                } else {
+                    body.classList.remove('theme-dark');
+                    btn.innerHTML = '🌙';
+                }
+                localStorage.setItem('theme', newTheme);
+            });
+        }
+    });
+    </script>
+  
+    <!-- Header Principal -->
+    {% if user.is_authenticated %}
+    <header class="techo-header sticky-top">
+        <div class="container-fluid">
+            <!-- Fila principal con hamburguesa, título y estadísticas -->
+            <div class="d-flex justify-content-between align-items-center py-2">
+                <!-- Botón hamburguesa (solo móvil) -->
+                <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <i class="bi bi-list fs-3"></i>
+                </button>
+                
+                <!-- Título (solo desktop) -->
+                <div class="d-none d-lg-block">
+                    <h1 class="header-title mb-0">TECHO CHILE - SEGUIMIENTO DE INCIDENTES</h1>
+                </div>
+                
+                <!-- Estadísticas con botón de tema integrado -->
+                <div class="d-flex gap-2 align-items-center flex-grow-1 justify-content-center justify-content-lg-end">
+                    <div class="header-stats d-flex gap-2 gap-md-3 flex-wrap justify-content-center">
+                        {% if es_familia %}
+                            <div class="stat-item">
+                                <span class="stat-label">Observaciones:</span>
+                                <span class="stat-value">{{ obs_total|default:0 }}</span>
+                            </div>
+                        {% else %}
+                            <div class="stat-item">
+                                <span class="stat-label">Proyectos:</span>
+                                <span class="stat-value">{{ total_proyectos|default:0  }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Observaciones:</span>
+                                <span class="stat-value">{{ obs_total|default:0 }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Viviendas:</span>
+                                <span class="stat-value">{{ viviendas_total|default:0  }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </header>
+    {% else %}
+    {% endif %}
+
+    <!-- Navigation Tabs (solo visible después de login) -->
+    {% if user.is_authenticated %}
+    <nav class="techo-nav">
+        <div class="container-fluid">
+            <div class="collapse navbar-collapse d-lg-block" id="navbarNav">
+                <ul class="nav nav-tabs flex-column flex-lg-row">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                           href="{% url 'dashboard' %}">
+                            <i class="bi bi-speedometer2"></i> Mi dashboard
+                        </a>
+                    </li>
+                    
+                    {% if user.is_superuser or es_admin or es_techo %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'proyectos' in request.resolver_match.namespace %}active{% endif %}" 
+                           href="{% url 'proyectos:lista' %}">
+                            <i class="bi bi-building"></i> Proyectos
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if not es_familia %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'incidencias' in request.resolver_match.namespace %}active{% endif %}" 
+                           href="{% url 'incidencias:lista_observaciones' %}">
+                            <i class="bi bi-exclamation-triangle"></i> Observaciones
+                        </a>
+                    </li>
+                    <!-- Enlace móvil prominente -->
+                    <li class="nav-item d-md-none">
+                        <a class="nav-link" 
+                           href="{% url 'incidencias:observaciones_movil' %}?v={{ timestamp }}"
+                           style="background-color: #e3f2fd; color: #1976d2; border-radius: 6px; font-weight: 600;">
+                            <i class="bi bi-phone-vibrate"></i> Chequeo Móvil
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if es_familia %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'incidencias' in request.resolver_match.namespace %}active{% endif %}" 
+                           href="{% url 'incidencias:lista_observaciones' %}">
+                            <i class="bi bi-exclamation-triangle"></i> Mis Observaciones
+                        </a>
+                    </li>
+                    <!-- Enlace móvil prominente para familias -->
+                    <li class="nav-item d-md-none">
+                        <a class="nav-link" 
+                           href="{% url 'incidencias:observaciones_movil' %}?v={{ timestamp }}"
+                           style="background-color: #e8f5e8; color: #2e7d32; border-radius: 6px; font-weight: 600;">
+                            <i class="bi bi-phone-vibrate"></i> Chequeo Móvil
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if user.is_superuser or es_admin or es_techo %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'maestro_index' %}active{% endif %}"
+                           href="{% url 'maestro_index' %}">
+                            <i class="bi bi-gear"></i> <b>Panel Maestro</b>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+
+                    {% if not es_familia %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'reportes' in request.resolver_match.namespace and request.resolver_match.url_name == 'index' %}active{% endif %}" 
+                           href="{% url 'reportes:index' %}">
+                            <i class="bi bi-file-earmark-text"></i> Documentación
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'listar_reportes_generados' %}active{% endif %}"
+                           href="{% url 'reportes:listar_reportes_generados' %}">
+                            <i class="bi bi-file-earmark-pdf"></i> Reportes PDF generados
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="nav-item ms-lg-auto">
+                            <span class="nav-link text-muted small">
+                                <i class="bi bi-person-badge"></i> {{ user.nombre }} - {{ user.email }}
+                                <br>
+                                {% if user.rol %}
+                                    <span class="badge bg-primary ms-1">{{ user.rol.nombre }}</span>
+                                {% endif %}
+                                {% if nombre_constructora %}
+                                    <br><small class="text-muted"><i class="bi bi-building"></i> {{ nombre_constructora }}</small>
+                                {% endif %}
+                            </span>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">
+                            <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container-fluid mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container-fluid py-4">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Botón flotante para versión móvil -->
+    {% if 'incidencias' in request.resolver_match.namespace and not es_familia %}
+    <div class="mobile-fab d-md-none">
+        <a href="{% url 'incidencias:observaciones_movil' %}?v={{ timestamp }}" 
+           class="fab-button"
+           title="Ir a Chequeo Móvil">
+            <i class="bi bi-phone-vibrate"></i>
+        </a>
+    </div>
+    
+    <style>
+        .mobile-fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .fab-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            border-radius: 50%;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+            transition: all 0.3s ease;
+            font-size: 24px;
+            animation: pulse 2s infinite;
+        }
+        
+        .fab-button:hover {
+            background: linear-gradient(135deg, #1976D2, #1565C0);
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(33, 150, 243, 0.6);
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 6px 20px rgba(33, 150, 243, 0.6);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+            }
+        }
+        
+        /* Efecto para dispositivos táctiles */
+        .fab-button:active {
+            transform: scale(0.95);
+        }
+    </style>
+    {% endif %}
+
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% load static %}{% static 'js/techo_dashboard.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
