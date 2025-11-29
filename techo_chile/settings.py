@@ -13,6 +13,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production'
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 #ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 ALLOWED_HOSTS = [
+    "0.0.0.0",
     "127.0.0.1",
     "localhost",
     "carolina-take-consequence-occupation.trycloudflare.com"
@@ -72,6 +73,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'techo_chile.wsgi.application'
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'django_db',                 # nombre de la BD que viste en GCP
+        'USER': 'django_user',               # usuario REAL que exista en Cloud SQL
+        'PASSWORD': 'Internet3108',      # la contraseña real del usuario
+        'HOST': '34.58.179.23',              # IP pública de la instancia
+        'PORT': '5432',
+    }
+}
+
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
@@ -83,12 +95,12 @@ WSGI_APPLICATION = 'techo_chile.wsgi.application'
 #     }
 # }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 
 AUTH_PASSWORD_VALIDATORS = [
