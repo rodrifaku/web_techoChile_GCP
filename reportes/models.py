@@ -7,6 +7,8 @@ class ReporteGenerado(models.Model):
     usuario = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
     nombre_archivo = models.CharField(max_length=255)
     ruta_archivo = models.CharField(max_length=255)
+    # Nuevo campo: archivo físico en almacenamiento configurado (GCS)
+    archivo = models.FileField(upload_to='reportes/', null=True, blank=True, help_text="Archivo PDF almacenado en GCS")
     fecha_generacion = models.DateTimeField(auto_now_add=True)
     filtros = models.JSONField(default=dict, blank=True)
 
@@ -147,6 +149,8 @@ class ActaRecepcion(models.Model):
     # Metadatos
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
+    # Nuevo: almacenamiento persistente del PDF generado en GCS
+    archivo_pdf = models.FileField(upload_to='actas/', null=True, blank=True, help_text="PDF del acta almacenado en GCS")
     
     def save(self, *args, **kwargs):
         # Auto-asignar proyecto y beneficiario desde la vivienda

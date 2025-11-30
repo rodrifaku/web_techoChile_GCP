@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'ficha_postventa',
     "django_extensions",
     'livereload',
+    "storages",
 ]
 
 MIDDLEWARE = [
@@ -143,17 +144,20 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+USE_GCS_MEDIA = os.getenv("USE_GCS_MEDIA", "false").lower() == "true"
+GS_MEDIA_BUCKET_NAME = "techo-chile-media-sa-west1"
 
+if USE_GCS_MEDIA:
+    DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
+    GS_DEFAULT_BUCKET_NAME = os.getenv("GS_MEDIA_BUCKET_NAME")
 
-MEDIA_URL = '/media/'
-DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-GS_BUCKET_NAME = "techo-chile-media-sa-west1"
-MEDIA_ROOT = BASE_DIR / 'media'
+    # Si el bucket es público, no necesitas firma en las URLs
+    GS_QUERYSTRING_AUTH = False
+
+    MEDIA_URL = f"https://storage.googleapis.com/{GS_DEFAULT_BUCKET_NAME}/"
+else:
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

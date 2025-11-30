@@ -48,6 +48,9 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+.env.*.local
+# Mantener el ejemplo para referencia
+!env.example.txt
 
 
 
