@@ -587,7 +587,17 @@ def detalle_observacion(request, pk):
         elif rol == 'FAMILIA':
             puede_subir_archivos = True if observacion.estado.nombre == 'Abierta' else False
     
-    archivos = observacion.archivos_adjuntos.all().order_by('-fecha_subida')
+    # Filtrar solo archivos que existen físicamente
+    archivos = []
+    for archivo in observacion.archivos_adjuntos.all().order_by('-fecha_subida'):
+        if archivo.archivo_existe():
+            archivos.append(archivo)
+    
+    # Obtener el último seguimiento (último cambio) - siempre mostrar el más reciente
+    ultimo_seguimiento = observacion.seguimientos.filter(activo=True).select_related('usuario', 'estado_anterior', 'estado_nuevo').order_by('-fecha').first()
+    
+    # Obtener TODOS los seguimientos para el historial completo
+    seguimientos = observacion.seguimientos.filter(activo=True).select_related('usuario', 'estado_anterior', 'estado_nuevo').order_by('-fecha')
 
     # Formulario para cambio de estado y subida de archivos
     if request.method == 'POST':
@@ -664,6 +674,8 @@ def detalle_observacion(request, pk):
         'puede_cambiar_estado': puede_cambiar_estado,
         'puede_subir_archivos': puede_subir_archivos,
         'puede_agregar_solucion': puede_agregar_solucion,
+        'ultimo_seguimiento': ultimo_seguimiento,
+        'seguimientos': seguimientos,
     }
     return render(request, 'incidencias/detalle_observacion.html', context)
 

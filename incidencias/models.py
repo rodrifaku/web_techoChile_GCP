@@ -166,6 +166,33 @@ class ArchivoAdjuntoObservacion(models.Model):
             self.nombre_original = self.archivo.name
         super().save(*args, **kwargs)
     
+    def archivo_existe(self):
+        """Verifica si el archivo físico existe en el sistema de archivos"""
+        if not self.archivo:
+            return False
+        try:
+            return self.archivo.storage.exists(self.archivo.name)
+        except (OSError, IOError, FileNotFoundError):
+            return False
+    
+    def get_tamaño_archivo(self):
+        """Obtiene el tamaño del archivo de forma segura"""
+        if not self.archivo_existe():
+            return None
+        try:
+            return self.archivo.size
+        except (OSError, IOError, FileNotFoundError):
+            return None
+    
+    def get_url_archivo(self):
+        """Obtiene la URL del archivo de forma segura"""
+        if not self.archivo_existe():
+            return None
+        try:
+            return self.archivo.url
+        except (OSError, IOError, FileNotFoundError):
+            return None
+    
     def __str__(self):
         return f"{self.observacion.pk} - {self.nombre_original}"
     

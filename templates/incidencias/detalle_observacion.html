@@ -1,6 +1,54 @@
 {% extends 'base.html' %}
 {% block title %}Observación #{{ observacion.pk }} - TECHO CHILE{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Estilos para modo oscuro - comentarios y descripciones */
+    .comentario-box {
+        background-color: #f8f9fa;
+        color: #212529;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+    }
+    
+    .descripcion-box {
+        background-color: #f8f9fa;
+        color: #212529;
+        padding: 1rem;
+        border-radius: 0.375rem;
+    }
+    
+    body.theme-dark .comentario-box,
+    body[data-theme="dark"] .comentario-box {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #4a5568;
+    }
+    
+    body.theme-dark .descripcion-box,
+    body[data-theme="dark"] .descripcion-box {
+        background-color: #2d3748 !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #4a5568;
+    }
+    
+    /* Asegurar que el texto en comentarios sea visible en modo oscuro */
+    body.theme-dark .comentario-box strong,
+    body[data-theme="dark"] .comentario-box strong,
+    body.theme-dark .comentario-box p,
+    body[data-theme="dark"] .comentario-box p,
+    body.theme-dark .comentario-box em,
+    body[data-theme="dark"] .comentario-box em {
+        color: #e2e8f0 !important;
+    }
+    
+    body.theme-dark .descripcion-box,
+    body[data-theme="dark"] .descripcion-box {
+        color: #e2e8f0 !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-lg-8">
@@ -35,8 +83,68 @@
                 </dd>
             </dl>
 
+            <!-- Información del último cambio - SIEMPRE VISIBLE -->
+            <div class="card border-primary mt-3 mb-3" style="background-color: #e7f3ff;">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-clock-history me-3 mt-1" style="font-size: 1.5rem; color: #0d6efd;"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-2" style="color: #0d6efd;">
+                                <strong>Última Actualización</strong>
+                            </h6>
+                            {% if ultimo_seguimiento %}
+                                <p class="card-text mb-1">
+                                    <strong>Fecha:</strong> {{ ultimo_seguimiento.fecha|date:"d/m/Y H:i" }}
+                                </p>
+                                {% if ultimo_seguimiento.usuario %}
+                                <p class="card-text mb-1">
+                                    <strong>Usuario:</strong> 
+                                    <span class="badge bg-primary">{{ ultimo_seguimiento.usuario.nombre }}</span>
+                                    {% if ultimo_seguimiento.usuario.email %}
+                                        <small class="text-muted">({{ ultimo_seguimiento.usuario.email }})</small>
+                                    {% endif %}
+                                </p>
+                                {% endif %}
+                                <p class="card-text mb-1">
+                                    <strong>Acción:</strong> 
+                                    <span class="badge bg-info text-dark">{{ ultimo_seguimiento.accion }}</span>
+                                    {% if ultimo_seguimiento.estado_anterior and ultimo_seguimiento.estado_nuevo %}
+                                        <span class="ms-2">
+                                            <span class="badge bg-secondary">{{ ultimo_seguimiento.estado_anterior.nombre }}</span>
+                                            <i class="bi bi-arrow-right mx-1"></i>
+                                            <span class="badge bg-success">{{ ultimo_seguimiento.estado_nuevo.nombre }}</span>
+                                        </span>
+                                    {% endif %}
+                                </p>
+                                {% if ultimo_seguimiento.comentario %}
+                                <div class="mt-2 comentario-box">
+                                    <i class="bi bi-chat-left-text me-1"></i>
+                                    <strong>Comentario:</strong>
+                                    <p class="mb-0 mt-1">{{ ultimo_seguimiento.comentario|linebreaks }}</p>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <p class="card-text mb-1">
+                                    <strong>Fecha:</strong> {{ observacion.fecha_ultima_actualizacion|date:"d/m/Y H:i"|default:observacion.fecha_creacion|date:"d/m/Y H:i" }}
+                                </p>
+                                {% if observacion.creado_por %}
+                                <p class="card-text mb-0">
+                                    <strong>Creada por:</strong> 
+                                    <span class="badge bg-secondary">{{ observacion.creado_por.nombre }}</span>
+                                </p>
+                                {% else %}
+                                <p class="card-text mb-0 text-muted">
+                                    <em>No hay información de seguimiento disponible</em>
+                                </p>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <h5 class="mt-4">Descripción</h5>
-            <div class="border rounded p-3 bg-light">
+            <div class="border rounded descripcion-box">
                 {{ observacion.detalle|linebreaks }}
             </div>
 
@@ -85,7 +193,7 @@
                 {% if observacion.archivo_adjunto or archivos %}
                 <div class="mt-3">
                     <!-- Archivo principal (si existe) -->
-                    {% if observacion.archivo_adjunto %}
+                    {% if observacion.archivo_adjunto and observacion.archivo_adjunto_existe %}
                     <div class="border rounded p-2 mb-2">
                         <div class="d-flex align-items-center gap-3">
                             <div class="flex-shrink-0">
@@ -101,26 +209,42 @@
                             </div>
                             <div class="flex-grow-1">
                                 <h6 class="mb-0">{{ observacion.archivo_adjunto.name|slice:"19:" }} <span class="badge bg-primary">Archivo inicial</span></h6>
-                                <small class="text-muted">Tamaño: {{ observacion.archivo_adjunto.size|filesizeformat }}</small>
+                                {% if observacion.get_tamaño_archivo_adjunto %}
+                                <small class="text-muted">Tamaño: {{ observacion.get_tamaño_archivo_adjunto|filesizeformat }}</small>
+                                {% else %}
+                                <small class="text-muted text-warning"><i class="bi bi-exclamation-triangle"></i> Archivo no disponible</small>
+                                {% endif %}
                             </div>
                             <div class="flex-shrink-0">
-                                <a href="{{ observacion.archivo_adjunto.url }}" target="_blank" class="btn btn-primary btn-sm">
+                                {% if observacion.get_url_archivo_adjunto %}
+                                <a href="{{ observacion.get_url_archivo_adjunto }}" target="_blank" class="btn btn-primary btn-sm">
                                     <i class="bi bi-download"></i>
                                 </a>
+                                {% else %}
+                                <span class="btn btn-secondary btn-sm disabled" title="Archivo no disponible">
+                                    <i class="bi bi-x-circle"></i>
+                                </span>
+                                {% endif %}
                             </div>
                         </div>
                         
                         <!-- Vista previa de imágenes -->
-                        {% if observacion.archivo_adjunto.name|slice:"-4:" == ".jpg" or observacion.archivo_adjunto.name|slice:"-5:" == ".jpeg" or observacion.archivo_adjunto.name|slice:"-4:" == ".png" or observacion.archivo_adjunto.name|slice:"-4:" == ".gif" or observacion.archivo_adjunto.name|slice:"-4:" == ".bmp" %}
+                        {% if observacion.get_url_archivo_adjunto and observacion.archivo_adjunto.name|slice:"-4:" == ".jpg" or observacion.archivo_adjunto.name|slice:"-5:" == ".jpeg" or observacion.archivo_adjunto.name|slice:"-4:" == ".png" or observacion.archivo_adjunto.name|slice:"-4:" == ".gif" or observacion.archivo_adjunto.name|slice:"-4:" == ".bmp" %}
                         <div class="mt-2">
-                            <img src="{{ observacion.archivo_adjunto.url }}" alt="Archivo adjunto" class="img-fluid rounded" style="max-height: 300px; cursor: pointer;" onclick="window.open('{{ observacion.archivo_adjunto.url }}', '_blank')">
+                            <img src="{{ observacion.get_url_archivo_adjunto }}" alt="Archivo adjunto" class="img-fluid rounded" style="max-height: 300px; cursor: pointer;" onclick="window.open('{{ observacion.get_url_archivo_adjunto }}', '_blank')">
                         </div>
                         {% endif %}
+                    </div>
+                    {% elif observacion.archivo_adjunto %}
+                    <div class="alert alert-warning mb-2">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        El archivo adjunto inicial no está disponible físicamente.
                     </div>
                     {% endif %}
 
                     <!-- Archivos adicionales -->
                     {% for archivo in archivos %}
+                    {% if archivo.archivo_existe %}
                     <div class="border rounded p-2 mb-2">
                         <div class="d-flex align-items-center gap-3">
                             <div class="flex-shrink-0">
@@ -139,13 +263,23 @@
                                 <small class="text-muted">
                                     {% if archivo.descripcion %}{{ archivo.descripcion }} - {% endif %}
                                     {{ archivo.fecha_subida|date:"d/m/Y H:i" }} por {{ archivo.subido_por.nombre|default:archivo.subido_por.email }}
-                                    - {{ archivo.archivo.size|filesizeformat }}
+                                    {% if archivo.get_tamaño_archivo %}
+                                        - {{ archivo.get_tamaño_archivo|filesizeformat }}
+                                    {% else %}
+                                        - <span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Tamaño no disponible</span>
+                                    {% endif %}
                                 </small>
                             </div>
                             <div class="flex-shrink-0">
-                                <a href="{{ archivo.archivo.url }}" target="_blank" class="btn btn-primary btn-sm me-1">
+                                {% if archivo.get_url_archivo %}
+                                <a href="{{ archivo.get_url_archivo }}" target="_blank" class="btn btn-primary btn-sm me-1">
                                     <i class="bi bi-download"></i>
                                 </a>
+                                {% else %}
+                                <span class="btn btn-secondary btn-sm disabled me-1" title="Archivo no disponible">
+                                    <i class="bi bi-x-circle"></i>
+                                </span>
+                                {% endif %}
                                 {% if user == archivo.subido_por or user.is_staff %}
                                 <a href="{% url 'incidencias:eliminar_archivo' archivo.pk %}" 
                                    class="btn btn-danger btn-sm"
@@ -157,12 +291,13 @@
                         </div>
                         
                         <!-- Vista previa de imágenes adicionales -->
-                        {% if archivo.archivo.name|slice:"-4:" == ".jpg" or archivo.archivo.name|slice:"-5:" == ".jpeg" or archivo.archivo.name|slice:"-4:" == ".png" or archivo.archivo.name|slice:"-4:" == ".gif" or archivo.archivo.name|slice:"-4:" == ".bmp" %}
+                        {% if archivo.get_url_archivo and archivo.archivo.name|slice:"-4:" == ".jpg" or archivo.archivo.name|slice:"-5:" == ".jpeg" or archivo.archivo.name|slice:"-4:" == ".png" or archivo.archivo.name|slice:"-4:" == ".gif" or archivo.archivo.name|slice:"-4:" == ".bmp" %}
                         <div class="mt-2">
-                            <img src="{{ archivo.archivo.url }}" alt="{{ archivo.nombre_original }}" class="img-fluid rounded" style="max-height: 300px; cursor: pointer;" onclick="window.open('{{ archivo.archivo.url }}', '_blank')">
+                            <img src="{{ archivo.get_url_archivo }}" alt="{{ archivo.nombre_original }}" class="img-fluid rounded" style="max-height: 300px; cursor: pointer;" onclick="window.open('{{ archivo.get_url_archivo }}', '_blank')">
                         </div>
                         {% endif %}
                     </div>
+                    {% endif %}
                     {% endfor %}
                 </div>
                 {% else %}
@@ -287,32 +422,60 @@
             
         </div>
 
-        {% if seguimientos %}
+        <!-- Historial completo de cambios -->
         <div class="chart-container mt-3">
-            <h5>Historial de Seguimiento</h5>
-            <div class="timeline">
+            <h5 class="mb-3">
+                <i class="bi bi-clock-history me-2"></i>Historial de Cambios
+                <span class="badge bg-secondary ms-2">{{ seguimientos.count }}</span>
+            </h5>
+            {% if seguimientos %}
+            <div class="timeline" style="max-height: 600px; overflow-y: auto;">
                 {% for seguimiento in seguimientos %}
-                <div class="timeline-item border-start border-3 ps-3 pb-3">
-                    <div class="timeline-date small text-muted">{{ seguimiento.fecha|date:"d/m H:i" }}</div>
+                <div class="timeline-item border-start border-3 ps-3 pb-3 mb-3" style="border-color: {% if forloop.first %}#0d6efd{% else %}#dee2e6{% endif %} !important;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="timeline-date">
+                            <i class="bi bi-calendar3 me-1"></i>
+                            <strong>{{ seguimiento.fecha|date:"d/m/Y" }}</strong>
+                            <small class="text-muted ms-1">{{ seguimiento.fecha|date:"H:i" }}</small>
+                        </div>
+                        <span class="badge bg-info text-dark">{{ seguimiento.accion }}</span>
+                    </div>
                     <div class="timeline-content">
-                        <strong>{{ seguimiento.accion }}</strong><br>
-                        <small class="text-muted">por {{ seguimiento.usuario.nombre|default:seguimiento.usuario.email }}</small>
-                        {% if seguimiento.comentario %}
-                        <div class="mt-1 p-2 bg-light rounded small">{{ seguimiento.comentario }}</div>
-                        {% endif %}
+                        <div class="mb-2">
+                            <i class="bi bi-person-fill me-1"></i>
+                            <strong>Usuario:</strong> 
+                            <span class="badge bg-primary">{{ seguimiento.usuario.nombre|default:"Usuario desconocido" }}</span>
+                            {% if seguimiento.usuario.email %}
+                                <small class="text-muted">({{ seguimiento.usuario.email }})</small>
+                            {% endif %}
+                        </div>
                         {% if seguimiento.estado_anterior and seguimiento.estado_nuevo %}
-                        <div class="mt-1">
-                            <span class="badge badge-{{ seguimiento.estado_anterior.nombre|lower }} small">{{ seguimiento.estado_anterior.nombre }}</span>
-                            →
-                            <span class="badge badge-{{ seguimiento.estado_nuevo.nombre|lower }} small">{{ seguimiento.estado_nuevo.nombre }}</span>
+                        <div class="mb-2">
+                            <i class="bi bi-arrow-left-right me-1"></i>
+                            <strong>Cambio de Estado:</strong>
+                            <span class="badge bg-secondary">{{ seguimiento.estado_anterior.nombre }}</span>
+                            <i class="bi bi-arrow-right mx-1"></i>
+                            <span class="badge bg-success">{{ seguimiento.estado_nuevo.nombre }}</span>
+                        </div>
+                        {% endif %}
+                        {% if seguimiento.comentario %}
+                        <div class="mt-2 comentario-box">
+                            <i class="bi bi-chat-left-text me-1"></i>
+                            <strong>Comentario:</strong>
+                            <p class="mb-0 mt-1">{{ seguimiento.comentario|linebreaks }}</p>
                         </div>
                         {% endif %}
                     </div>
                 </div>
                 {% endfor %}
             </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                No hay historial de cambios registrado para esta observación.
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 </div>
 
