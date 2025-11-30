@@ -13,15 +13,21 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production'
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 #ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 ALLOWED_HOSTS = [
-    "0.0.0.0",
     "127.0.0.1",
     "localhost",
+    "34.13.127.157",  # IP del Load Balancer
+    "techo-django-47670800654.southamerica-west1.run.app",
+    "techo-django-47670800654.southamerica-east1.run.app",
     "carolina-take-consequence-occupation.trycloudflare.com"
+    
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     
     "https://*.trycloudflare.com",   # útil cuando el subdominio rota (DEV)
+    "https://techo-django-47670800654.southamerica-west1.run.app",
+    "http://34.13.127.157",
+    "https://34.13.127.157",
 ]
 
 INSTALLED_APPS = [
@@ -42,13 +48,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'livereload.middleware.LiveReloadScript',
+    #'livereload.middleware.LiveReloadScript',
 ]
 
 ROOT_URLCONF = 'techo_chile.urls'
@@ -73,16 +80,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'techo_chile.wsgi.application'
 
+import os
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'django_db',                 # nombre de la BD que viste en GCP
-        'USER': 'django_user',               # usuario REAL que exista en Cloud SQL
-        'PASSWORD': 'Internet3108',      # la contraseña real del usuario
-        'HOST': '34.58.179.23',              # IP pública de la instancia
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'django_db'),
+        'USER': os.environ.get('DB_USER', 'django_user'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'Internet3108'),
+        'HOST': os.environ.get('DB_HOST', '34.176.25.171'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
+
 
 # DATABASES = {
 #     'default': {
@@ -128,6 +138,8 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

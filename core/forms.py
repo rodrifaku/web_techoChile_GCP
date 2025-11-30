@@ -91,7 +91,11 @@ class UsuarioForm(forms.ModelForm):
         # Mostrar solo constructoras activas, igual que región y comuna
         self.fields['constructora'].queryset = Constructora.objects.filter(activo=True).order_by('nombre')
         self.fields['region'].queryset = Region.objects.filter(activo=True).order_by('nombre')
-        self.fields['comuna'].queryset = Comuna.objects.filter(activo=True).order_by('nombre')
+        # Filtrar comunas por región si hay una región seleccionada
+        if self.instance and self.instance.pk and self.instance.region:
+            self.fields['comuna'].queryset = Comuna.objects.filter(region=self.instance.region, activo=True).order_by('nombre')
+        else:
+            self.fields['comuna'].queryset = Comuna.objects.filter(activo=True).order_by('nombre')
         # Contraseña obligatoria solo en creación
         if not self.instance.pk:
             self.fields['password'].required = True

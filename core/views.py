@@ -258,11 +258,12 @@ def dashboard(request):
 
 def ajax_comunas_por_region(request):
     region_id = request.GET.get('region_id')
-import logging
-
-logger = logging.getLogger(__name__)
-
-# ...existing code...
+    if region_id:
+        comunas = Comuna.objects.filter(region_id=region_id, activo=True).order_by('nombre')
+        comunas_data = [{'id': comuna.id, 'nombre': comuna.nombre} for comuna in comunas]
+    else:
+        comunas_data = []
+    return JsonResponse({'comunas': comunas_data})
 
 @login_required
 @rol_requerido('ADMINISTRADOR', 'TECHO')
