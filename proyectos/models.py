@@ -267,8 +267,11 @@ def crear_usuario_familia(sender, instance, created, **kwargs):
                     rut=instance.rut,
                     rol=rol_familia
                 )
-                print(f"✓ Usuario FAMILIA creado automáticamente: {usuario.email} (RUT: {instance.rut})")
-                print(f"  Contraseña temporal: {password}")
+                # Solo mostrar información en desarrollo, nunca la contraseña
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"Usuario FAMILIA creado automáticamente: {usuario.email} (RUT: {instance.rut})")
+                # La contraseña se genera pero no se muestra por seguridad
             except Rol.DoesNotExist:
                 print(f"⚠ Error: No existe el rol FAMILIA. No se pudo crear usuario para {instance.rut}")
             except Exception as e:

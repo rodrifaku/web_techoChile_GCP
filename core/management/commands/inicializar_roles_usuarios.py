@@ -128,21 +128,43 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('\n✓ Inicialización completada exitosamente!\n'))
             self.stdout.write('='*60)
             
+            from django.conf import settings
+            
             self.stdout.write('\n📊 RESUMEN DE USUARIOS CREADOS:\n')
             self.stdout.write('-' * 60)
-            self.stdout.write(f'{"Email":<30} {"Rol":<20} {"Password"}')
-            self.stdout.write('-' * 60)
             
-            usuarios_list = [
-                ('admin@techo.cl', 'ADMINISTRADOR', 'admin123'),
-                ('techo@techo.cl', 'TECHO', 'techo123'),
-                ('serviu@gobierno.cl', 'SERVIU', 'serviu123'),
-                ('constructora@empresa.cl', 'CONSTRUCTORA', 'const123'),
-                ('familia@beneficiario.cl', 'FAMILIA', 'familia123'),
-            ]
-            
-            for email, rol, password in usuarios_list:
-                self.stdout.write(f'{email:<30} {rol:<20} {password}')
+            # Solo mostrar contraseñas en modo DEBUG (desarrollo)
+            if settings.DEBUG:
+                self.stdout.write(f'{"Email":<30} {"Rol":<20} {"Password"}')
+                self.stdout.write('-' * 60)
+                
+                usuarios_list = [
+                    ('admin@techo.cl', 'ADMINISTRADOR', 'admin123'),
+                    ('techo@techo.cl', 'TECHO', 'techo123'),
+                    ('serviu@gobierno.cl', 'SERVIU', 'serviu123'),
+                    ('constructora@empresa.cl', 'CONSTRUCTORA', 'const123'),
+                    ('familia@beneficiario.cl', 'FAMILIA', 'familia123'),
+                ]
+                
+                for email, rol, password in usuarios_list:
+                    self.stdout.write(f'{email:<30} {rol:<20} {password}')
+            else:
+                # En producción, solo mostrar emails y roles
+                self.stdout.write(f'{"Email":<40} {"Rol":<20}')
+                self.stdout.write('-' * 60)
+                
+                usuarios_list = [
+                    ('admin@techo.cl', 'ADMINISTRADOR'),
+                    ('techo@techo.cl', 'TECHO'),
+                    ('serviu@gobierno.cl', 'SERVIU'),
+                    ('constructora@empresa.cl', 'CONSTRUCTORA'),
+                    ('familia@beneficiario.cl', 'FAMILIA'),
+                ]
+                
+                for email, rol in usuarios_list:
+                    self.stdout.write(f'{email:<40} {rol:<20}')
+                self.stdout.write(self.style.WARNING('\n⚠️  Las contraseñas no se muestran por seguridad.'))
+                self.stdout.write(self.style.WARNING('   Use el sistema de recuperación de contraseña o contacte al administrador.'))
             
             self.stdout.write('-' * 60)
             self.stdout.write(f'\n📈 Total de usuarios activos: {Usuario.objects.filter(is_active=True).count()}')

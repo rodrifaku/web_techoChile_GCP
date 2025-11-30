@@ -1,16 +1,13 @@
 
 import os
 from pathlib import Path
+from decouple import config, Csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-@#$%^&*()-change-this-in-production'
-
-DEBUG = True
-
-# Configuración de seguridad
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')
-DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
+# Configuración de seguridad - todas las variables sensibles deben estar en .env
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
+DEBUG = config('DEBUG', default=True, cast=bool)
 #ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -80,18 +77,30 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'techo_chile.wsgi.application'
 
-import os
-
+# Configuración de base de datos
+# Valores por defecto: localhost (para desarrollo local con DB local)
+# Para usar IP externa en local, crea un archivo .env.local con tus credenciales
+# El archivo .env.local NO se sube a git (está en .gitignore)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'django_db'),
-        'USER': os.environ.get('DB_USER', 'django_user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'Internet3108'),
-        'HOST': os.environ.get('DB_HOST', '34.176.25.171'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'NAME': config('DB_NAME', default='django_db'),
+        'USER': config('DB_USER', default='django_user'),
+        'PASSWORD': config('DB_PASSWORD', default=''),  # Sin valor por defecto inseguro
+        'HOST': config('DB_HOST', default='127.0.0.1'),  # Default: localhost para commits
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
+
+# Validar que las credenciales críticas estén configuradas en producción
+if not DEBUG:
+    required_db_vars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST']
+    missing_vars = [var for var in required_db_vars if not config(var, default=None)]
+    if missing_vars:
+        raise ValueError(
+            f"Variables de entorno faltantes en producción: {', '.join(missing_vars)}. "
+            "Por favor, configura estas variables en tu archivo .env o variables de entorno."
+        )
 
 
 # DATABASES = {
@@ -153,3 +162,42 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 # Configuración de email para desarrollo: mostrar correos en consola
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Configuración de logging para seguridad
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'password_filter': {
+            '()': 'django.utils.log.CallbackFilter',
+            'callback': lambda record: 'password' not in str(record.getMessage()).lower() and 'contraseña' not in str(record.getMessage()).lower(),
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'filters': ['password_filter'],
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'core': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'proyectos': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    },
+}

@@ -79,10 +79,17 @@ class Command(BaseCommand):
         self.stdout.write('\n' + '='*60)
         self.stdout.write(self.style.SUCCESS('✅ PRUEBA EXITOSA - SIGNAL FUNCIONANDO'))
         self.stdout.write('='*60)
+        from django.conf import settings
+        
         self.stdout.write('\n📋 DATOS PARA LOGIN:')
         self.stdout.write(f'   URL: http://127.0.0.1:8000/login/')
         self.stdout.write(f'   Usuario: {email_nuevo}')
-        self.stdout.write(f'   Contraseña: familia123')
+        # Solo mostrar contraseña en modo DEBUG (desarrollo)
+        if settings.DEBUG:
+            self.stdout.write(f'   Contraseña: familia123')
+        else:
+            self.stdout.write(self.style.WARNING('   Contraseña: [OCULTA POR SEGURIDAD]'))
+            self.stdout.write(self.style.WARNING('   Use el sistema de recuperación de contraseña.'))
         self.stdout.write('\n🏠 VIVIENDA ASIGNADA:')
         if proyecto:
             self.stdout.write(f'   Proyecto: {proyecto.nombre}')

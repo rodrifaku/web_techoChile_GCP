@@ -14,4 +14,7 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
 
+RUN python manage.py collectstatic --noinput
+
+
 CMD ["gunicorn", "techo_chile.wsgi:application", "--bind", "0.0.0.0:8080"]
