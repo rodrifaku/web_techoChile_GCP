@@ -120,16 +120,16 @@ class Observacion(models.Model):
             return False
         try:
             return self.archivo_adjunto.storage.exists(self.archivo_adjunto.name)
-        except (OSError, IOError, FileNotFoundError):
+        except Exception:
             return False
     
     def get_tamaño_archivo(self):
         """Obtiene el tamaño del archivo de forma segura desde storage (local o GCS)"""
-        if not self.archivo_existe():
+        if not self.archivo_adjunto:
             return None
         try:
             return self.archivo_adjunto.size
-        except (OSError, IOError, FileNotFoundError, AttributeError):
+        except Exception:
             return None
     
     def get_url_archivo(self):
@@ -138,7 +138,7 @@ class Observacion(models.Model):
             return None
         try:
             return self.archivo_adjunto.url
-        except (OSError, IOError, FileNotFoundError, ValueError):
+        except Exception:
             return None
     
     id_externo = models.CharField(
