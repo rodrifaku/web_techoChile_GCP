@@ -167,12 +167,19 @@ GS_MEDIA_BUCKET_NAME = "techo-chile-media-sa-west1"
 
 if USE_GCS_MEDIA:
     DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-    GS_DEFAULT_BUCKET_NAME = os.getenv("GS_MEDIA_BUCKET_NAME")
-
-    # Si el bucket es público, no necesitas firma en las URLs
-    GS_QUERYSTRING_AUTH = False
-
-    MEDIA_URL = f"https://storage.googleapis.com/{GS_DEFAULT_BUCKET_NAME}/"
+    # Intentar tomar el bucket desde variable de entorno, si no, usar constante definida
+    GS_DEFAULT_BUCKET_NAME = os.getenv("GS_MEDIA_BUCKET_NAME") or GS_MEDIA_BUCKET_NAME
+    if not GS_DEFAULT_BUCKET_NAME:
+        # Falla silenciosa: mantenemos MEDIA_URL local para no romper arranque
+        # (Evita crash si se olvidó configurar variable en Cloud Run)
+        USE_GCS_MEDIA = False
+        DEFAULT_FILE_STORAGE = None
+        MEDIA_URL = "/media/"
+        MEDIA_ROOT = BASE_DIR / "media"
+    else:
+        # Si el bucket es público, no necesitas firma en las URLs
+        GS_QUERYSTRING_AUTH = False
+        MEDIA_URL = f"https://storage.googleapis.com/{GS_DEFAULT_BUCKET_NAME}/"
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
