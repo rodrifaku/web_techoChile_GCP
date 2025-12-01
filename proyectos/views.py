@@ -192,7 +192,13 @@ def crear_vivienda(request, proyecto_pk):
             vivienda = form.save(commit=False)
             vivienda.proyecto = proyecto
             vivienda.save()
-            messages.success(request, f'Vivienda {vivienda.numero_vivienda} creada exitosamente.')
+            
+            # Mensaje personalizado según si tiene beneficiario
+            if vivienda.beneficiario:
+                messages.success(request, f'✅ Vivienda {vivienda.codigo} creada exitosamente. Vivienda asignada a beneficiario {vivienda.beneficiario.nombre_completo}.')
+            else:
+                messages.success(request, f'✅ Vivienda {vivienda.codigo} creada exitosamente.')
+            
             return redirect('proyectos:detalle', pk=proyecto.pk)
     else:
         form = ViviendaForm()
@@ -244,6 +250,20 @@ def buscar_beneficiario_por_rut(request):
             ).first()
             
             if beneficiario:
+                # Verificar si ya tiene vivienda asignada
+                if hasattr(beneficiario, 'vivienda') and beneficiario.vivienda:
+                    vivienda = beneficiario.vivienda
+                    return JsonResponse({
+                        'success': False,
+                        'tiene_vivienda': True,
+                        'error': f'⚠️ Este beneficiario ya tiene una vivienda asignada',
+                        'vivienda_info': {
+                            'proyecto': vivienda.proyecto.codigo,
+                            'codigo': vivienda.codigo,
+                            'url': f'/proyectos/{vivienda.proyecto.id}/'
+                        }
+                    })
+                
                 return JsonResponse({
                     'success': True,
                     'beneficiario': {
