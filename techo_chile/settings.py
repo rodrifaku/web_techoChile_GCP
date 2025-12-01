@@ -104,7 +104,9 @@ DATABASES = {
 }
 
 # Validar que las credenciales críticas estén configuradas en producción
-if not DEBUG:
+# Solo validar si no estamos en build (collectstatic no necesita DB)
+import sys
+if not DEBUG and 'collectstatic' not in sys.argv:
     required_db_vars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST']
     missing_vars = [var for var in required_db_vars if not config(var, default=None)]
     if missing_vars:
