@@ -247,7 +247,7 @@ def crear_usuario_familia(sender, instance, created, **kwargs):
     
     - Username: RUT del beneficiario
     - Email: Email del beneficiario
-    - Password: 'familia123' (por defecto)
+    - Password: Últimos 6 dígitos del RUT
     - Rol: FAMILIA
     - Nombre: Nombre completo del beneficiario
     """
@@ -267,14 +267,23 @@ def crear_usuario_familia(sender, instance, created, **kwargs):
                     rut=instance.rut,
                     rol=rol_familia
                 )
-                # Solo mostrar información en desarrollo, nunca la contraseña
+                # Almacenar credenciales temporalmente en el objeto para que la vista las pueda recuperar
+                instance._usuario_creado = True
+                instance._usuario_email = instance.email
+                instance._usuario_password = password
+                
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.info(f"Usuario FAMILIA creado automáticamente: {usuario.email} (RUT: {instance.rut})")
-                # La contraseña se genera pero no se muestra por seguridad
             except Rol.DoesNotExist:
-                print(f"⚠ Error: No existe el rol FAMILIA. No se pudo crear usuario para {instance.rut}")
+                instance._usuario_error = "No existe el rol FAMILIA. No se pudo crear usuario."
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error: No existe el rol FAMILIA. No se pudo crear usuario para {instance.rut}")
             except Exception as e:
-                print(f"⚠ Error al crear usuario para beneficiario {instance.rut}: {str(e)}")
+                instance._usuario_error = f"Error al crear usuario: {str(e)}"
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error al crear usuario para beneficiario {instance.rut}: {str(e)}")
         else:
-            print(f"ℹ Ya existe un usuario con RUT {instance.rut}, no se creó uno nuevo")
+            instance._usuario_existente = True

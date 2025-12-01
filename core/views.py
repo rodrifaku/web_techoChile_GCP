@@ -538,8 +538,32 @@ class BeneficiarioCreate(LoginRequiredMixin, RolRequiredMixin, View):
         from proyectos.forms import BeneficiarioForm
         form = BeneficiarioForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Beneficiario creado exitosamente.')
+            beneficiario = form.save()
+            
+            # Verificar si se creó usuario automáticamente
+            if hasattr(beneficiario, '_usuario_creado') and beneficiario._usuario_creado:
+                messages.success(
+                    request, 
+                    f'✅ Beneficiario creado exitosamente.<br>'
+                    f'<strong>Usuario creado:</strong><br>'
+                    f'📧 <strong>Correo:</strong> {beneficiario._usuario_email}<br>'
+                    f'🔑 <strong>Contraseña:</strong> {beneficiario._usuario_password}<br>'
+                    f'<small class="text-muted">⚠️ Guarde esta información, no se volverá a mostrar.</small>',
+                    extra_tags='safe'
+                )
+            elif hasattr(beneficiario, '_usuario_error'):
+                messages.warning(
+                    request,
+                    f'⚠️ Beneficiario creado, pero hubo un problema al crear el usuario: {beneficiario._usuario_error}'
+                )
+            elif hasattr(beneficiario, '_usuario_existente'):
+                messages.info(
+                    request,
+                    f'ℹ️ Beneficiario creado. Ya existía un usuario con este RUT.'
+                )
+            else:
+                messages.success(request, '✅ Beneficiario creado exitosamente.')
+            
             return redirect('maestro_beneficiario_list')
         return render(request, 'maestro/beneficiario_form.html', {'form': form, 'titulo': 'Crear Beneficiario'})
 
