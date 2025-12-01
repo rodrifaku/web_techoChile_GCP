@@ -399,9 +399,13 @@ def dashboard_pdf_report(request):
     from django.core.files.storage import default_storage
     gcs_path = f"reportes/{filename}"
     try:
-        if not default_storage.exists(gcs_path):
-            default_storage.save(gcs_path, ContentFile(pdf))
-    except Exception:
+        # Siempre guardar en GCS, sobrescribir si existe
+        default_storage.save(gcs_path, ContentFile(pdf))
+    except Exception as e:
+        # Log el error pero continuar
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error guardando reporte en GCS: {e}")
         gcs_path = None
 
     # Registrar metadatos en la base de datos
@@ -410,11 +414,13 @@ def dashboard_pdf_report(request):
             usuario=usuario,
             nombre_archivo=filename,
             ruta_archivo=ruta_reporte,
-            archivo=gcs_path if gcs_path else None,
+            archivo=gcs_path if gcs_path else '',  # Guardar path de GCS
             fecha_generacion=ahora,
             filtros=filtros_dict
         )
     except Exception as e:
-        pass  # Si hay error, continuar igual
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error guardando metadata de reporte: {e}")
 
     return response
