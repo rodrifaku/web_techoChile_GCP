@@ -16,6 +16,8 @@ ALLOWED_HOSTS = [
     "34.13.127.157",  # IP del Load Balancer
     ".run.app",       # cualquier subdominio de run.app
     ".trycloudflare.com",  # túneles dev
+    ".southamerica-west1.run.app",
+    ".southamerica-east1.run.app",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -23,6 +25,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.trycloudflare.com",
     "http://34.13.127.157",
     "https://34.13.127.157",
+    "https://*.southamerica-west1.run.app",
+    "https://*.southamerica-east1.run.app",
 ]
 
 # Configuración de seguridad para HTTPS en producción
