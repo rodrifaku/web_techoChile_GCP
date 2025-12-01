@@ -206,7 +206,8 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Configuración de WhiteNoise para servir archivos estáticos
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# Usar CompressedStaticFilesStorage en lugar de Manifest para evitar errores con source maps
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 USE_GCS_MEDIA = os.getenv("USE_GCS_MEDIA", "false").lower() == "true"
 GS_MEDIA_BUCKET_NAME = "techo-chile-media-sa-west1"
