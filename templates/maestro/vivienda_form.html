@@ -188,9 +188,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 mostrarMensaje(`✅ Beneficiario encontrado: ${data.beneficiario.nombre_completo}`, 'success');
             } else {
-                mostrarMensaje(`❌ ${data.error}`, 'danger');
-                // Limpiar campos si no se encuentra
-                beneficiarioSelect.value = '';
+                // Verificar si ya tiene vivienda asignada
+                if (data.tiene_vivienda) {
+                    const mensajeVivienda = `
+                        <div class="alert alert-warning mb-0 py-2">
+                            <strong>⚠️ ${data.error}</strong><br>
+                            <small>Proyecto: <strong>${data.vivienda_info.proyecto}</strong> - Vivienda: <strong>${data.vivienda_info.codigo}</strong></small>
+                            <br>
+                            <a href="${data.vivienda_info.url}" target="_blank" class="btn btn-sm btn-outline-warning mt-2">
+                                <i class="bi bi-box-arrow-up-right"></i> Ver vivienda asignada
+                            </a>
+                        </div>
+                    `;
+                    resultadoDiv.innerHTML = mensajeVivienda;
+                    
+                    // Bloquear campo de beneficiario
+                    beneficiarioSelect.value = '';
+                    beneficiarioSelect.disabled = true;
+                } else {
+                    mostrarMensaje(`❌ ${data.error}`, 'danger');
+                    // Limpiar campos si no se encuentra
+                    beneficiarioSelect.value = '';
+                }
             }
         })
         .catch(error => {
@@ -224,6 +243,10 @@ document.addEventListener('DOMContentLoaded', function() {
         rutInput.addEventListener('input', function() {
             if (resultadoDiv && resultadoDiv.innerHTML) {
                 resultadoDiv.innerHTML = '';
+            }
+            // Desbloquear campo si estaba bloqueado
+            if (beneficiarioSelect) {
+                beneficiarioSelect.disabled = false;
             }
         });
     }
