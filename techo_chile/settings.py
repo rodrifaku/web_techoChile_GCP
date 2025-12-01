@@ -45,6 +45,25 @@ if not DEBUG:
 # Durante diagnóstico temporal desactivamos redirección forzada para evitar bucles
 SECURE_SSL_REDIRECT = False
 
+# Configuración de CSRF y Sesiones para Cloud Run
+# CSRF_COOKIE_HTTPONLY debe ser False para que JavaScript pueda leer el token
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = 'Lax'  # 'Lax' permite peticiones desde el mismo sitio
+CSRF_USE_SESSIONS = False  # Usar cookie independiente para CSRF
+CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
+
+# Configuración de sesiones
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 86400  # 24 horas
+SESSION_SAVE_EVERY_REQUEST = False
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Usar base de datos para sesiones
+
+# Permitir cookies en subdominios de run.app
+if not DEBUG:
+    SESSION_COOKIE_DOMAIN = None  # Usar dominio actual
+    CSRF_COOKIE_DOMAIN = None
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -67,7 +86,9 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'core.middleware_csrf.CsrfCookieEnforcerMiddleware',  # Forzar cookie CSRF
     'django.middleware.csrf.CsrfViewMiddleware',
+    'core.middleware_csrf.CsrfDebugMiddleware',  # Debug CSRF errors
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

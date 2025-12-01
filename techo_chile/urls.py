@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 from core import views as core_views
 from core.views_dashboard_pdf import dashboard_pdf_report, generando_reporte
 from core.views_dashboard_excel import dashboard_excel_report
+from core.views_csrf_diagnostic import csrf_diagnostic
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -62,6 +63,7 @@ urlpatterns = [
     path('viviendas/', include('viviendas.urls', namespace='viviendas')),
     path('auth/', include('django.contrib.auth.urls')),
     path('ajax/comunas/', core_views.ajax_comunas_por_region, name='ajax_comunas'),
+    path('_diagnostic/csrf/', csrf_diagnostic, name='csrf_diagnostic'),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 if settings.DEBUG:

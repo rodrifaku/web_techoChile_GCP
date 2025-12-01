@@ -39,13 +39,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Realizar cambio via AJAX
-        fetch(`/incidencias/${observacionIdActual}/cambiar-estado/`, {
+        // Realizar cambio via AJAX con CSRF helper
+        window.csrfUtils.fetchWithCsrf(`/incidencias/${observacionIdActual}/cambiar-estado/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: new URLSearchParams({
                 estado: estado,
