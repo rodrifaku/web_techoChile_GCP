@@ -122,6 +122,20 @@ class Observacion(models.Model):
             return delta.days
         return None
     
+    @property
+    def dias_cierre_vs_vencimiento(self):
+        """
+        Para observaciones cerradas: calcula si se cerró dentro o fuera del plazo.
+        Retorna:
+        - Número positivo: días de margen (cerrada antes del vencimiento)
+        - Número negativo: días de atraso (cerrada después del vencimiento)
+        - None: si no tiene fecha de vencimiento o no está cerrada
+        """
+        if self.fecha_cierre and self.fecha_vencimiento:
+            delta = self.fecha_vencimiento - self.fecha_cierre.date()
+            return delta.days
+        return None
+    
     def archivo_existe(self):
         """Verifica si el archivo físico existe en el storage (local o GCS)"""
         if not self.archivo_adjunto:
