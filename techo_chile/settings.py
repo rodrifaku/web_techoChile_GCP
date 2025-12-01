@@ -210,15 +210,13 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 USE_GCS_MEDIA = os.getenv("USE_GCS_MEDIA", "false").lower() == "true"
-GS_MEDIA_BUCKET_NAME = "techo-chile-media-sa-west1"
 
 if USE_GCS_MEDIA:
     DEFAULT_FILE_STORAGE = "storages.backends.gcloud.GoogleCloudStorage"
-    # Intentar tomar el bucket desde variable de entorno, si no, usar constante definida
-    GS_DEFAULT_BUCKET_NAME = os.getenv("GS_MEDIA_BUCKET_NAME") or GS_MEDIA_BUCKET_NAME
-    if not GS_DEFAULT_BUCKET_NAME:
+    # django-storages usa GS_BUCKET_NAME, no GS_DEFAULT_BUCKET_NAME
+    GS_BUCKET_NAME = os.getenv("GS_MEDIA_BUCKET_NAME", "techo-chile-media-sa-west1")
+    if not GS_BUCKET_NAME:
         # Falla silenciosa: mantenemos MEDIA_URL local para no romper arranque
-        # (Evita crash si se olvidó configurar variable en Cloud Run)
         USE_GCS_MEDIA = False
         DEFAULT_FILE_STORAGE = None
         MEDIA_URL = "/media/"
@@ -226,7 +224,7 @@ if USE_GCS_MEDIA:
     else:
         # Si el bucket es público, no necesitas firma en las URLs
         GS_QUERYSTRING_AUTH = False
-        MEDIA_URL = f"https://storage.googleapis.com/{GS_DEFAULT_BUCKET_NAME}/"
+        MEDIA_URL = f"https://storage.googleapis.com/{GS_BUCKET_NAME}/"
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
