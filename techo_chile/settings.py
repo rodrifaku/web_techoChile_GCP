@@ -11,6 +11,8 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # Permitir dominios dinámicos de Cloud Run y túneles Cloudflare durante diagnóstico.
 # En producción se recomienda restringir más específicamente.
 ALLOWED_HOSTS = [
+    
+    ".dockerdev",
     "127.0.0.1",
     "localhost",
     "34.13.127.157",  # IP del Load Balancer
@@ -98,12 +100,18 @@ WSGI_APPLICATION = 'techo_chile.wsgi.application'
 # Valores por defecto: localhost (para desarrollo local con DB local)
 # Para usar IP externa en local, crea un archivo .env.local con tus credenciales
 # El archivo .env.local NO se sube a git (está en .gitignore)
+
+# DEBUG: Verificar credenciales de DB
+db_password = config('DB_PASSWORD', default='')
+db_user = config('DB_USER', default='django_user')
+print(f"[DEBUG] DB_USER: {db_user}, DB_PASSWORD length: {len(db_password) if db_password else 0}")
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DB_NAME', default='django_db'),
-        'USER': config('DB_USER', default='django_user'),
-        'PASSWORD': config('DB_PASSWORD', default=''),  # Sin valor por defecto inseguro
+        'USER': db_user,
+        'PASSWORD': db_password,  # Sin valor por defecto inseguro
         'HOST': config('DB_HOST', default='127.0.0.1'),  # Default: localhost para commits
         'PORT': config('DB_PORT', default='5432'),
     }
