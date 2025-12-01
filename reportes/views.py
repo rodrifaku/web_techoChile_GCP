@@ -44,10 +44,13 @@ def listar_reportes_generados(request):
         solo_fechas = all(k in ['fecha_inicio', 'fecha_fin'] for k, v in filtros_validos)
         fechas_vacias = all(v == '' for k, v in filtros_validos if k in ['fecha_inicio', 'fecha_fin'])
         mostrar_sin_filtro = (filtros_validos == [] or (solo_fechas and fechas_vacias))
+        # Obtener URL directa de GCS si está disponible
+        url_gcs = r.get_url_archivo() if r.archivo else None
         reportes_list.append({
             'obj': r,
             'filtros_validos': filtros_validos,
             'mostrar_sin_filtro': mostrar_sin_filtro,
+            'url_gcs': url_gcs,
         })
 
     return render(request, 'reportes/listar_reportes_generados.html', {

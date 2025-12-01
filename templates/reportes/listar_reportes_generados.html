@@ -57,7 +57,11 @@
                   {% endif %}
                 </td>
                 <td data-label="Acciones">
-                    <a href="{% url 'reportes:descargar_reporte_generado' r.obj.id %}" class="btn btn-primary btn-sm">Descargar</a>
+                    {% if r.url_gcs %}
+                        <a href="{{ r.url_gcs }}" class="btn btn-primary btn-sm" target="_blank" rel="noopener noreferrer">Descargar</a>
+                    {% else %}
+                        <a href="{% url 'reportes:descargar_reporte_generado' r.obj.id %}" class="btn btn-primary btn-sm">Descargar</a>
+                    {% endif %}
                 </td>
             </tr>
         {% empty %}
