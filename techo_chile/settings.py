@@ -8,23 +8,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Configuración de seguridad - todas las variables sensibles deben estar en .env
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
 DEBUG = config('DEBUG', default=False, cast=bool)
-#ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+# Permitir dominios dinámicos de Cloud Run y túneles Cloudflare durante diagnóstico.
+# En producción se recomienda restringir más específicamente.
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "34.13.127.157",  # IP del Load Balancer
-    "techo-django-47670800654.southamerica-west1.run.app",
-    "techo-django-47670800654.southamerica-east1.run.app",
-    "carolina-take-consequence-occupation.trycloudflare.com"
-    
+    ".run.app",       # cualquier subdominio de run.app
+    ".trycloudflare.com",  # túneles dev
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    
-    "https://*.trycloudflare.com",   # útil cuando el subdominio rota (DEV)
-    "https://techo-django-47670800654.southamerica-west1.run.app",
-    "https://techo-django-47670800654.southamerica-east1.run.app",
-    "https://techo-django-2bhjalqg2a-tl.a.run.app/",
+    "https://*.run.app",
+    "https://*.trycloudflare.com",
     "http://34.13.127.157",
     "https://34.13.127.157",
 ]
