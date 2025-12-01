@@ -203,6 +203,11 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# Configuración de WhiteNoise para servir archivos estáticos
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 USE_GCS_MEDIA = os.getenv("USE_GCS_MEDIA", "false").lower() == "true"
 GS_MEDIA_BUCKET_NAME = "techo-chile-media-sa-west1"
 
