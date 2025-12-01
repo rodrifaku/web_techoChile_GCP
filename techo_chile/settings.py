@@ -145,6 +145,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 USE_GCS_MEDIA = os.getenv("USE_GCS_MEDIA", "false").lower() == "true"
 GS_MEDIA_BUCKET_NAME = "techo-chile-media-sa-west1"
 

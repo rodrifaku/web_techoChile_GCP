@@ -319,11 +319,10 @@ def dashboard_pdf_report(request):
     import os
     from datetime import datetime, timedelta
     from reportes.models import ReporteGenerado
+    from django.conf import settings
     
     # Callback para que xhtml2pdf encuentre archivos estáticos y media en Cloud Run
-    from django.conf import settings
     def link_callback(uri, rel):
-        # Mapear /static/ y /media/ a rutas locales en el contenedor
         if uri.startswith(settings.STATIC_URL):
             path = os.path.join(settings.STATIC_ROOT, uri.replace(settings.STATIC_URL, ""))
             if os.path.isfile(path):
@@ -332,14 +331,12 @@ def dashboard_pdf_report(request):
             path = os.path.join(settings.MEDIA_ROOT, uri.replace(settings.MEDIA_URL, ""))
             if os.path.isfile(path):
                 return path
-        # Si es una URL absoluta (http/https) se devuelve tal cual; xhtml2pdf intentará resolverla
         return uri
-
+    
     # Generar PDF con xhtml2pdf (agregando link_callback para entorno cloud)
     pdf_buffer = BytesIO()
     pisa_status = pisa.CreatePDF(html_string, dest=pdf_buffer, link_callback=link_callback)
     if pisa_status.err:
-        # Mejor feedback de error
         return HttpResponse(f'Error al generar el PDF (xhtml2pdf) - código: {pisa_status.err}', status=500)
     pdf = pdf_buffer.getvalue()
     pdf_buffer.close()
@@ -367,8 +364,7 @@ def dashboard_pdf_report(request):
         try:
             if reporte_existente.archivo:
                 # Leer directamente desde storage
-                file_field = reporte_existente.archivo
-                pdf = file_field.read()
+                pdf = reporte_existente.archivo.read()
             else:
                 ruta_absoluta = os.path.join(os.path.dirname(os.path.dirname(__file__)), reporte_existente.ruta_archivo)
                 with open(ruta_absoluta, 'rb') as f:
@@ -387,8 +383,7 @@ def dashboard_pdf_report(request):
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="{filename}"'
 
-    # Guardar PDF en carpeta local
-    # Asegurar carpeta existe (en Cloud Run el filesystem es efímero pero escribible)
+    # Guardar PDF en carpeta local (legacy) y en GCS (nuevo)
     carpeta_reportes = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'reportes_generados')
     os.makedirs(carpeta_reportes, exist_ok=True)
     ruta_reporte = os.path.join('reportes_generados', filename)
@@ -397,7 +392,7 @@ def dashboard_pdf_report(request):
         with open(ruta_absoluta, 'wb') as f:
             f.write(pdf)
     except Exception:
-        ruta_absoluta = None
+        pass
 
     # Guardar en Google Cloud Storage (almacenamiento persistente)
     from django.core.files.base import ContentFile

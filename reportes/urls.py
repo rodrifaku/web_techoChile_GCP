@@ -32,7 +32,7 @@ urlpatterns = [
         path('actas/<int:pk>/editar/', views.acta_edit, name='acta_edit'),
         path('actas/<int:pk>/eliminar/', views.acta_delete, name='acta_delete'),
         path('actas/<int:pk>/pdf/', views.acta_pdf, name='acta_pdf'),
-        path('actas/<int:pk>/pdf/signed/', views.acta_pdf_signed, name='acta_pdf_signed'),
+        path('actas/<int:pk>/pdf/signed/', views.acta_pdf_signed_url, name='acta_pdf_signed_url'),
         # AJAX endpoints
         path('ajax/buscar-beneficiario/', views.buscar_beneficiario_ajax, name='buscar_beneficiario_ajax'),
         path('api/viviendas-por-proyecto/', views.get_viviendas_by_proyecto, name='viviendas_por_proyecto'),

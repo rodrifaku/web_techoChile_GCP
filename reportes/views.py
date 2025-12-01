@@ -1,8 +1,11 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import ReporteGenerado
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, JsonResponse
 import os
+from datetime import timedelta
+from django.utils import timezone
+from google.cloud import storage
 
 # Vista para listar reportes generados
 @login_required
@@ -665,13 +668,6 @@ def acta_pdf(request, pk):
     
     es_descarga = request.GET.get('download') == '1'
     
-    # Si ya existe PDF en almacenamiento y no se fuerza regeneración devolverlo
-    if es_descarga and hasattr(acta, 'archivo_pdf') and acta.archivo_pdf and request.GET.get('force') != '1':
-        try:
-            return FileResponse(acta.archivo_pdf.open('rb'), as_attachment=True, filename=f"Acta de Recepción - {acta.numero_acta}.pdf")
-        except Exception:
-            pass  # si falla, continúa y regenera
-
     # GENERAR PDF completo si download=1
     if es_descarga:
         # Ruta mínima de diagnóstico: generar un PDF básico si ?mode=min
@@ -691,6 +687,14 @@ def acta_pdf(request, pk):
                 return response
             except Exception as e:
                 print(f"ERROR PDF minimal: {e}")
+        # Si ya existe PDF en almacenamiento y no se fuerza regeneración devolverlo
+        if hasattr(acta, 'archivo_pdf') and acta.archivo_pdf and request.GET.get('force') != '1':
+            try:
+                from django.http import FileResponse
+                return FileResponse(acta.archivo_pdf.open('rb'), as_attachment=True, filename=f"Acta de Recepción - {acta.numero_acta}.pdf")
+            except Exception:
+                pass  # si falla, continúa y regenera
+
         # 1) Usar xhtml2pdf para compatibilidad con Windows
         try:
             from xhtml2pdf import pisa
@@ -728,6 +732,7 @@ def acta_pdf(request, pk):
                         acta.archivo_pdf.save(f"Acta_{acta.numero_acta}.pdf", ContentFile(pdf_file), save=True)
                 except Exception:
                     pass
+                from django.http import FileResponse
                 return FileResponse(BytesIO(pdf_file), as_attachment=True, filename=f"Acta de Recepción - {acta.numero_acta}.pdf")
             pdf_buffer.close()
         except Exception:
@@ -986,62 +991,6 @@ def acta_pdf(request, pk):
         response['X-PDF-Engine'] = 'html-view'
     
     return response
-@login_required  
-def acta_pdf_signed(request, pk):
-    """Devuelve URL firmada temporal al PDF del acta (genera si no existe)."""
-    acta = get_object_or_404(ActaRecepcion, pk=pk)
-    # Generar si falta y parámetro generate=1
-    if (not acta.archivo_pdf or request.GET.get('generate') == '1'):
-        try:
-            from xhtml2pdf import pisa
-            from django.conf import settings
-            def link_callback(uri, rel):
-                if uri.startswith(settings.STATIC_URL):
-                    path = os.path.join(settings.STATIC_ROOT, uri.replace(settings.STATIC_URL, ""))
-                    if os.path.isfile(path):
-                        return path
-                if uri.startswith(settings.MEDIA_URL):
-                    path = os.path.join(settings.MEDIA_ROOT, uri.replace(settings.MEDIA_URL, ""))
-                    if os.path.isfile(path):
-                        return path
-                return uri
-            context = {
-                'acta': acta,
-                'proyecto': acta.proyecto,
-                'beneficiario': acta.beneficiario,
-                'vivienda': acta.vivienda,
-                'familiares': acta.familiares.all(),
-                'fecha_generacion': timezone.now(),
-                'es_descarga': True,
-                'para_pdf': True,
-            }
-            html_content = render_to_string('reportes/acta_template.html', context, request=request)
-            pdf_buffer = BytesIO()
-            pisa_status = pisa.CreatePDF(html_content, dest=pdf_buffer, link_callback=link_callback)
-            if not pisa_status.err:
-                pdf_file = pdf_buffer.getvalue()
-                pdf_buffer.close()
-                from django.core.files.base import ContentFile
-                acta.archivo_pdf.save(f"Acta_{acta.numero_acta}.pdf", ContentFile(pdf_file), save=True)
-        except Exception:
-            pass
-    if not acta.archivo_pdf:
-        return JsonResponse({'error': 'No se pudo generar el PDF'}, status=500)
-    # Crear URL firmada
-    try:
-        from google.cloud import storage
-        from datetime import timedelta
-        client = storage.Client()
-        bucket_name = acta.archivo_pdf.storage.bucket.name if hasattr(acta.archivo_pdf.storage, 'bucket') else getattr(settings, 'GS_BUCKET_NAME', None)
-        if not bucket_name:
-            raise ValueError('Bucket no configurado')
-        bucket = client.bucket(bucket_name)
-        blob = bucket.blob(acta.archivo_pdf.name)
-        url = blob.generate_signed_url(expiration=timedelta(minutes=10), version='v4', method='GET')
-        return JsonResponse({'url': url, 'expires_in': 600, 'acta': acta.numero_acta})
-    except Exception as e:
-        return JsonResponse({'error': f'Error generando URL firmada: {e}'}, status=500)
-
 
 
 @login_required
@@ -1272,3 +1221,54 @@ def buscar_beneficiario_ajax(request):
             'success': False, 
             'error': f'Error al buscar beneficiario: {str(e)}'
         })
+
+
+@login_required
+def acta_pdf_signed_url(request, pk):
+    """
+    Genera una URL firmada temporal (10 min) para descargar el acta PDF desde GCS.
+    """
+    from .models import ActaRecepcion
+    from django.conf import settings
+    
+    acta = get_object_or_404(ActaRecepcion, pk=pk)
+    
+    # Verificar que existe el archivo en GCS
+    if not acta.archivo_pdf:
+        return JsonResponse({
+            'success': False,
+            'error': 'El acta no tiene PDF generado. Genere el PDF primero.'
+        }, status=404)
+    
+    try:
+        # Obtener cliente de GCS
+        client = storage.Client()
+        bucket = client.bucket(settings.GS_BUCKET_NAME)
+        blob = bucket.blob(acta.archivo_pdf.name)
+        
+        # Verificar que existe
+        if not blob.exists():
+            return JsonResponse({
+                'success': False,
+                'error': 'El archivo PDF no existe en el almacenamiento.'
+            }, status=404)
+        
+        # Generar URL firmada válida por 10 minutos
+        url_firmada = blob.generate_signed_url(
+            version="v4",
+            expiration=timedelta(minutes=10),
+            method="GET"
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'url': url_firmada,
+            'expires_in': 600,  # segundos
+            'filename': acta.archivo_pdf.name.split('/')[-1]
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error generando URL firmada: {str(e)}'
+        }, status=500)
