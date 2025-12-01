@@ -113,6 +113,34 @@ class Observacion(models.Model):
             delta = self.fecha_vencimiento - date.today()
             return delta.days
         return None
+    
+    def archivo_existe(self):
+        """Verifica si el archivo físico existe en el storage (local o GCS)"""
+        if not self.archivo_adjunto:
+            return False
+        try:
+            return self.archivo_adjunto.storage.exists(self.archivo_adjunto.name)
+        except (OSError, IOError, FileNotFoundError):
+            return False
+    
+    def get_tamaño_archivo(self):
+        """Obtiene el tamaño del archivo de forma segura desde storage (local o GCS)"""
+        if not self.archivo_existe():
+            return None
+        try:
+            return self.archivo_adjunto.size
+        except (OSError, IOError, FileNotFoundError, AttributeError):
+            return None
+    
+    def get_url_archivo(self):
+        """Obtiene la URL del archivo de forma segura"""
+        if not self.archivo_adjunto:
+            return None
+        try:
+            return self.archivo_adjunto.url
+        except (OSError, IOError, FileNotFoundError, ValueError):
+            return None
+    
     id_externo = models.CharField(
         max_length=50, 
         blank=True, 

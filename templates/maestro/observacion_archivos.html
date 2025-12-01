@@ -14,12 +14,20 @@
             {% if archivos %}
                 <ul class="list-group">
                     {% for archivo in archivos %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <a href="{{ archivo.archivo.url }}" target="_blank">
-                                <i class="bi bi-paperclip"></i> {{ archivo.archivo.name }}
-                            </a>
-                            <span class="text-muted">{{ archivo.archivo.size|filesizeformat }}</span>
-                        </li>
+                        {% with url=archivo.get_url_archivo size=archivo.get_tamaño_archivo %}
+                            {% if url %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <a href="{{ url }}" target="_blank">
+                                        <i class="bi bi-paperclip"></i> {{ archivo.nombre_original|default:archivo.archivo.name }}
+                                    </a>
+                                    {% if size %}
+                                        <span class="text-muted">{{ size|filesizeformat }}</span>
+                                    {% else %}
+                                        <span class="text-muted">Tamaño desconocido</span>
+                                    {% endif %}
+                                </li>
+                            {% endif %}
+                        {% endwith %}
                     {% endfor %}
                 </ul>
             {% else %}
