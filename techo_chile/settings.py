@@ -23,6 +23,7 @@ CSRF_TRUSTED_ORIGINS = [
     
     "https://*.trycloudflare.com",   # útil cuando el subdominio rota (DEV)
     "https://techo-django-47670800654.southamerica-west1.run.app",
+    "https://techo-django-47670800654.southamerica-east1.run.app",
     "http://34.13.127.157",
     "https://34.13.127.157",
 ]
@@ -40,7 +41,7 @@ INSTALLED_APPS = [
     'reportes',
     'ficha_postventa',
     "django_extensions",
-    'livereload',
+    #'livereload',
     "storages",
 ]
 
