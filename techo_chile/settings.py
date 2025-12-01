@@ -117,15 +117,38 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'techo_chile.wsgi.application'
 
-# Configuración de base de datos
-# Valores por defecto: localhost (para desarrollo local con DB local)
-# Para usar IP externa en local, crea un archivo .env.local con tus credenciales
-# El archivo .env.local NO se sube a git (está en .gitignore)
+# ============================================================================
+# CONFIGURACIÓN DE BASE DE DATOS
+# ============================================================================
+# Modos disponibles:
+# 1. SQLite (USE_SQLITE=true): Base de datos local para desarrollo rápido
+# 2. Cloud SQL (USE_CLOUD_SQL=true): Postgres remoto en GCP
+# 3. Postgres local: Configurar DB_HOST manualmente
 
-# DEBUG: Verificar credenciales de DB
 db_password = config('DB_PASSWORD', default='')
 db_user = config('DB_USER', default='django_user')
-print(f"[DEBUG] DB_USER: {db_user}, DB_PASSWORD length: {len(db_password) if db_password else 0}")
+
+# Bandera opcional para forzar uso de Cloud SQL desde local o producción.
+# USE_CLOUD_SQL=true implica:
+#   - En Cloud Run (detectado por K_SERVICE) se usa socket /cloudsql/<instancia>
+#   - En local se espera que el Cloud SQL Auth Proxy esté escuchando en 127.0.0.1:5432
+# Variables necesarias:
+#   CLOUD_SQL_CONNECTION_NAME=proyecto:region:instancia
+#     Ejemplo: techo-chile:southamerica-west1:techo-sql-primary
+#   DB_NAME, DB_USER, DB_PASSWORD (extraídas de Secret Manager o .env local)
+USE_CLOUD_SQL = os.getenv('USE_CLOUD_SQL', 'false').lower() == 'true'
+CLOUD_SQL_CONNECTION_NAME = os.getenv('CLOUD_SQL_CONNECTION_NAME')
+RUNNING_IN_CLOUD_RUN = os.getenv('K_SERVICE') is not None
+
+# Determinar host por defecto según modo
+_default_host = '127.0.0.1'
+if USE_CLOUD_SQL:
+    if RUNNING_IN_CLOUD_RUN and CLOUD_SQL_CONNECTION_NAME:
+        # Socket Unix dentro de Cloud Run
+        _default_host = f"/cloudsql/{CLOUD_SQL_CONNECTION_NAME}"
+    else:
+        # Modo local con proxy levantado en 127.0.0.1
+        _default_host = '127.0.0.1'
 
 DATABASES = {
     'default': {
@@ -133,7 +156,8 @@ DATABASES = {
         'NAME': config('DB_NAME', default='django_db'),
         'USER': db_user,
         'PASSWORD': db_password,  # Sin valor por defecto inseguro
-        'HOST': config('DB_HOST', default='127.0.0.1'),  # Default: localhost para commits
+        # Si DB_HOST está definido lo respeta; si no, usa cálculo anterior.
+        'HOST': config('DB_HOST', default=_default_host),
         'PORT': config('DB_PORT', default='5432'),
     }
 }
@@ -147,6 +171,27 @@ if USE_SQLITE:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
+# Verificación suave: avisar si Cloud SQL Auth Proxy no responde en desarrollo local
+# (solo si USE_CLOUD_SQL=true y no estamos en Cloud Run ni en build)
+if USE_CLOUD_SQL and not RUNNING_IN_CLOUD_RUN and 'collectstatic' not in sys.argv:
+    db_host = DATABASES['default'].get('HOST', '')
+    if db_host == '127.0.0.1':
+        import socket
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(('127.0.0.1', 5432))
+            sock.close()
+            if result != 0:
+                print(
+                    "[WARN] Cloud SQL Auth Proxy no responde en 127.0.0.1:5432.\n"
+                    "       Inicia el proxy con:\n"
+                    "       ./cloud-sql-proxy <CLOUD_SQL_CONNECTION_NAME>\n"
+                    "       o el servicio fallará al conectar a la base de datos."
+                )
+        except Exception:
+            pass  # Fallar silenciosamente para no romper el arranque
 
 # Validar que las credenciales críticas estén configuradas en producción
 # Solo validar si no estamos en build (collectstatic no necesita DB)

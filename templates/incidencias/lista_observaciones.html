@@ -261,24 +261,31 @@ body.dark-mode .modal-content-techo .btn-techo-primary {
                         {% if obs.fecha_vencimiento %}
                             {{ obs.fecha_vencimiento|date:"d/m/Y" }}<br>
                             <small>
-                                {% if obs.es_urgente %}
-                                    {% if obs.esta_vencida %}
-                                        <span class="text-danger">Vencida</span>
-                                    {% else %}
-                                        <span class="text-danger fw-bold">{{ obs.dias_para_vencer }} días restantes</span>
-                                    {% endif %}
-                                {% else %}
-                                    {% if obs.dias_para_vencer %}
-                                        {% if obs.dias_para_vencer > 0 %}
-                                            {{ obs.dias_para_vencer }} días restantes
-                                        {% else %}
-                                            Vencida hace {{ obs.dias_para_vencer|add:"-1" }} días
+                                {% if obs.esta_vencida %}
+                                    <span class="text-danger fw-bold">
+                                        <i class="bi bi-exclamation-circle"></i> Vencida
+                                        {% if obs.dias_para_vencer and obs.dias_para_vencer < 0 %}
+                                            ({{ obs.dias_para_vencer|stringformat:"d"|slice:"1:" }} días)
                                         {% endif %}
+                                    </span>
+                                {% elif obs.dias_para_vencer is not None %}
+                                    {% if obs.dias_para_vencer <= 3 %}
+                                        <span class="text-danger fw-bold">
+                                            <i class="bi bi-clock-fill"></i> {{ obs.dias_para_vencer }} día{{ obs.dias_para_vencer|pluralize }} restante{{ obs.dias_para_vencer|pluralize }}
+                                        </span>
+                                    {% elif obs.dias_para_vencer <= 7 %}
+                                        <span class="text-warning fw-bold">
+                                            <i class="bi bi-clock"></i> {{ obs.dias_para_vencer }} días restantes
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">
+                                            {{ obs.dias_para_vencer }} días restantes
+                                        </span>
                                     {% endif %}
                                 {% endif %}
                             </small>
                         {% else %}
-                            -
+                            <span class="text-muted">Sin vencimiento</span>
                         {% endif %}
                     </td>
                     <td>
