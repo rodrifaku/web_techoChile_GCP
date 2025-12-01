@@ -36,6 +36,11 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+    # Header que indica protocolo cuando estamos detrás de proxy (Cloud Run)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Durante diagnóstico temporal desactivamos redirección forzada para evitar bucles
+SECURE_SSL_REDIRECT = False
 
 INSTALLED_APPS = [
     'django.contrib.admin',
