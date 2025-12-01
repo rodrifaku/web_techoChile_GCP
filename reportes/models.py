@@ -14,6 +14,33 @@ class ReporteGenerado(models.Model):
     def __str__(self):
         return f"{self.nombre_archivo} ({self.fecha_generacion:%d/%m/%Y %H:%M})"
 
+    def archivo_existe(self):
+        """Verifica si el archivo existe en GCS de forma segura"""
+        if not self.archivo:
+            return False
+        try:
+            return self.archivo.storage.exists(self.archivo.name)
+        except (OSError, IOError, FileNotFoundError) as e:
+            return False
+
+    def get_tamaño_archivo(self):
+        """Obtiene el tamaño del archivo de forma segura"""
+        if not self.archivo:
+            return None
+        try:
+            return self.archivo.size
+        except (OSError, IOError, FileNotFoundError, ValueError) as e:
+            return None
+
+    def get_url_archivo(self):
+        """Obtiene la URL del archivo de forma segura"""
+        if not self.archivo:
+            return None
+        try:
+            return self.archivo.url
+        except (OSError, IOError, FileNotFoundError, ValueError) as e:
+            return None
+
     class Meta:
         verbose_name = "Reporte generado"
         verbose_name_plural = "Reportes generados"

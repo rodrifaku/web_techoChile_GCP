@@ -60,6 +60,17 @@ def listar_reportes_generados(request):
 @login_required
 def descargar_reporte_generado(request, reporte_id):
     reporte = get_object_or_404(ReporteGenerado, id=reporte_id)
+    
+    # Usar el campo archivo de GCS si está disponible
+    if reporte.archivo:
+        try:
+            # Abrir desde GCS
+            archivo_file = reporte.archivo.open('rb')
+            return FileResponse(archivo_file, as_attachment=True, filename=reporte.nombre_archivo)
+        except (OSError, IOError, FileNotFoundError) as e:
+            raise Http404(f'Archivo no encontrado en storage: {e}')
+    
+    # Fallback: intentar con ruta local (para compatibilidad con reportes antiguos)
     ruta = os.path.join(os.path.dirname(os.path.dirname(__file__)), reporte.ruta_archivo)
     if not os.path.exists(ruta):
         raise Http404('Archivo no encontrado')
