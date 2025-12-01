@@ -17,6 +17,7 @@ ENV PORT=8080
 # Crear scripts para jobs de Cloud Run
 RUN echo '#!/bin/bash\npython manage.py migrate' > /app/migrate.sh && chmod +x /app/migrate.sh
 RUN echo '#!/bin/bash\npython manage.py createsuperuser --noinput' > /app/createsuperuser.sh && chmod +x /app/createsuperuser.sh
+RUN echo '#!/bin/bash\npython /app/fix_permissions.py' > /app/fix_permissions.sh && chmod +x /app/fix_permissions.sh
 
 RUN python manage.py collectstatic --noinput
 
