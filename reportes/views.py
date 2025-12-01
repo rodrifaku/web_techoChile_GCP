@@ -17,7 +17,8 @@ def listar_reportes_generados(request):
 
     # Filtro por fecha (YYYY-MM-DD)
     fecha_filtro = request.GET.get('fecha')
-    reportes = ReporteGenerado.objects.all()
+    # Solo mostrar reportes que tienen archivo en GCS
+    reportes = ReporteGenerado.objects.exclude(archivo='')
     if fecha_filtro:
         # Buscar reportes de ese día
         reportes = reportes.filter(fecha_generacion__date=fecha_filtro)
