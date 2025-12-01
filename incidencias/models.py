@@ -205,7 +205,9 @@ class ArchivoAdjuntoObservacion(models.Model):
     
     def get_tamaño_archivo(self):
         """Obtiene el tamaño del archivo de forma segura"""
-        if not self.archivo_existe():
+        # No dependemos de exists() ya que en GCS puede fallar
+        # Preferimos intentar acceder y capturar errores
+        if not self.archivo:
             return None
         try:
             return self.archivo.size
@@ -214,7 +216,8 @@ class ArchivoAdjuntoObservacion(models.Model):
     
     def get_url_archivo(self):
         """Obtiene la URL del archivo de forma segura"""
-        if not self.archivo_existe():
+        # Evitar chequeo exists() previo para compatibilidad con GCS
+        if not self.archivo:
             return None
         try:
             return self.archivo.url
