@@ -124,11 +124,12 @@ if USE_SQLITE:
 import sys
 if not DEBUG and 'collectstatic' not in sys.argv and DATABASES['default']['ENGINE'] != 'django.db.backends.sqlite3':
     required_db_vars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST']
-    missing_vars = [var for var in required_db_vars if not config(var, default=None)]
+    missing_vars = [var for var in required_db_vars if not os.getenv(var)]
     if missing_vars:
-        raise ValueError(
-            f"Variables de entorno faltantes en producción: {', '.join(missing_vars)}. "
-            "Por favor, configura estas variables en tu archivo .env o variables de entorno."
+        # En vez de abortar el arranque, logueamos advertencia para no dejar el servicio en 503.
+        print(
+            f"[WARN] Variables de entorno DB faltantes: {', '.join(missing_vars)}. "
+            "El servicio inicia pero la conexión a Postgres fallará hasta configurarlas."
         )
 
 
