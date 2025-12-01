@@ -24,6 +24,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.trycloudflare.com",   # útil cuando el subdominio rota (DEV)
     "https://techo-django-47670800654.southamerica-west1.run.app",
     "https://techo-django-47670800654.southamerica-east1.run.app",
+    "https://techo-django-2bhjalqg2a-tl.a.run.app/",
     "http://34.13.127.157",
     "https://34.13.127.157",
 ]
@@ -108,10 +109,20 @@ DATABASES = {
     }
 }
 
+# Fallback de diagnóstico: permitir usar SQLite si se define USE_SQLITE=true en variables de entorno
+USE_SQLITE = os.getenv('USE_SQLITE', 'false').lower() == 'true'
+if USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
 # Validar que las credenciales críticas estén configuradas en producción
 # Solo validar si no estamos en build (collectstatic no necesita DB)
 import sys
-if not DEBUG and 'collectstatic' not in sys.argv:
+if not DEBUG and 'collectstatic' not in sys.argv and DATABASES['default']['ENGINE'] != 'django.db.backends.sqlite3':
     required_db_vars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST']
     missing_vars = [var for var in required_db_vars if not config(var, default=None)]
     if missing_vars:
