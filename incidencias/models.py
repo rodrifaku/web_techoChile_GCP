@@ -101,6 +101,7 @@ class Observacion(models.Model):
 
     @property
     def esta_vencida(self):
+        """Verifica si la observación está vencida (solo aplica para estado Abierta)"""
         if self.fecha_vencimiento and self.estado.nombre == 'Abierta':
             from datetime import date
             return date.today() > self.fecha_vencimiento
@@ -108,7 +109,14 @@ class Observacion(models.Model):
 
     @property
     def dias_para_vencer(self):
-        if self.fecha_vencimiento and self.estado.nombre == 'Abierta':
+        """
+        Calcula los días restantes/transcurridos desde la fecha de vencimiento.
+        Retorna:
+        - Número positivo: días restantes hasta vencimiento
+        - Número negativo: días transcurridos desde el vencimiento
+        - None: si no hay fecha de vencimiento
+        """
+        if self.fecha_vencimiento:
             from datetime import date
             delta = self.fecha_vencimiento - date.today()
             return delta.days
